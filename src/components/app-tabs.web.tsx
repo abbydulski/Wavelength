@@ -6,7 +6,7 @@ import {
     TabTrigger,
     TabTriggerSlotProps,
 } from 'expo-router/ui';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
@@ -66,9 +66,14 @@ export function CustomTabList(props: TabListProps) {
   return (
     <View {...props} style={styles.tabListContainer}>
       <ThemedView type="backgroundElement" style={styles.innerContainer}>
-        <Text style={[styles.brandText, { color: theme.text }]}>
-          Wavelength
-        </Text>
+        <View style={styles.brandContainer}>
+          <Image
+            source={require('../../public/Wavelength_Logo.png')}
+            style={styles.brandLogo}
+            resizeMode="contain"
+          />
+          <ThemedText style={styles.brandText}>Wavelength</ThemedText>
+        </View>
 
         {props.children}
       </ThemedView>
@@ -96,8 +101,17 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
     flexWrap: 'wrap',
   },
-  brandText: {
+  brandContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginRight: 'auto',
+    gap: Spacing.sm,
+  },
+  brandLogo: {
+    width: 28,
+    height: 28,
+  },
+  brandText: {
     fontFamily: 'Lora_600SemiBold',
     fontSize: 16,
     fontWeight: '600',

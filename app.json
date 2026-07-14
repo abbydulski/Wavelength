@@ -8,29 +8,34 @@
     "scheme": "wavelength",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/images/icon.png",
+      "bundleIdentifier": "com.wavelength.app"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#FAF8F5",
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
+      "package": "com.wavelength.app",
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "name": "Wavelength",
+      "shortName": "Wavelength",
+      "description": "Trust-based local discovery — recommendations from people you trust.",
+      "themeColor": "#6B8F71",
+      "backgroundColor": "#FAF8F5"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#FAF9F6",
+          "backgroundColor": "#FAF8F5",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 120
         }
       ]
     ],

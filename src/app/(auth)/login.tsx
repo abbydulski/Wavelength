@@ -1,6 +1,7 @@
 import { Link } from 'expo-router';
 import { useState } from 'react';
 import {
+    Image,
     KeyboardAvoidingView,
     Platform,
     Pressable,
@@ -44,6 +45,11 @@ export default function LoginScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.content}>
           <View style={styles.header}>
+            <Image
+              source={require('../../../public/Wavelength_Logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
             <Text style={[styles.title, { color: theme.text }]}>
               Wavelength
             </Text>
@@ -126,6 +132,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   content: { flex: 1, justifyContent: 'center', paddingHorizontal: Spacing.xl },
   header: { alignItems: 'center', marginBottom: Spacing['3xl'] },
+  logo: { width: 80, height: 80, marginBottom: Spacing.lg },
   title: { fontFamily: 'Lora_600SemiBold', fontSize: FontSize['3xl'], marginBottom: Spacing.md },
   tagline: { fontFamily: 'Lora_400Regular_Italic', fontStyle: 'italic', fontSize: FontSize.base },
   form: { gap: Spacing.lg },
