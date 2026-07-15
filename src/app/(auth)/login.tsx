@@ -34,7 +34,16 @@ export default function LoginScreen() {
     setLoading(true);
     setError('');
     const { error: err } = await signIn(email.trim(), password);
-    if (err) setError(err);
+    if (err) {
+      // Supabase returns "Email not confirmed" for unverified accounts
+      if (err.toLowerCase().includes('not confirmed') || err.toLowerCase().includes('email not confirmed')) {
+        setError('Your email hasn\'t been verified yet. Check your inbox for a confirmation link.');
+      } else if (err.toLowerCase().includes('invalid login credentials')) {
+        setError('Incorrect email or password. Please try again.');
+      } else {
+        setError(err);
+      }
+    }
     setLoading(false);
   };
 

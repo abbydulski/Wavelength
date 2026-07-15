@@ -16,6 +16,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BorderRadius, FontSize, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/auth-provider';
 
 export default function SignupScreen() {
@@ -51,14 +52,35 @@ export default function SignupScreen() {
     setLoading(false);
   };
 
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
+
+  const handleResend = async () => {
+    setResending(true);
+    setResent(false);
+    await supabase.auth.resend({ type: 'signup', email: email.trim() });
+    setResent(true);
+    setResending(false);
+  };
+
   if (success) {
     return (
       <ThemedView style={styles.container}>
         <SafeAreaView style={[styles.safeArea, styles.centered]}>
-          <ThemedText type="subtitle">Check your email</ThemedText>
+          <Image
+            source={require('../../../public/Wavelength_Logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={[styles.checkEmailTitle, { color: theme.text }]}>Check your email ✉️</Text>
           <ThemedText themeColor="textSecondary" style={styles.successText}>
-            We sent a confirmation link to {email}. Tap it to activate your account, then come back and sign in.
+            We sent a confirmation link to{'\n'}
+            <Text style={{ fontFamily: 'Lora_600SemiBold', color: theme.text }}>{email}</Text>
           </ThemedText>
+          <ThemedText themeColor="textSecondary" style={styles.successSubtext}>
+            Tap the link in the email to verify your account, then come back here and sign in.
+          </ThemedText>
+
           <Link href="/(auth)/login" asChild>
             <Pressable style={StyleSheet.flatten([styles.button, { backgroundColor: theme.accent }])}>
               <Text style={{ color: theme.accentText, fontFamily: 'Lora_600SemiBold', fontSize: FontSize.base }}>
@@ -66,6 +88,12 @@ export default function SignupScreen() {
               </Text>
             </Pressable>
           </Link>
+
+          <Pressable onPress={handleResend} disabled={resending} style={{ opacity: resending ? 0.5 : 1 }}>
+            <Text style={[styles.resendText, { color: theme.accent }]}>
+              {resent ? 'Email resent ✓' : resending ? 'Resending...' : "Didn't get it? Resend email"}
+            </Text>
+          </Pressable>
         </SafeAreaView>
       </ThemedView>
     );
@@ -174,6 +202,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: Spacing.md,
   },
+  checkEmailTitle: { fontFamily: 'Lora_600SemiBold', fontSize: FontSize['2xl'], marginBottom: Spacing.md },
   successText: { textAlign: 'center', fontSize: FontSize.base, lineHeight: 24, paddingHorizontal: Spacing.lg },
+  successSubtext: { textAlign: 'center', fontSize: FontSize.sm, lineHeight: 20, paddingHorizontal: Spacing.xl },
+  resendText: { fontFamily: 'Lora_600SemiBold', fontSize: FontSize.sm, marginTop: Spacing.md },
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: Spacing['3xl'] },
 });

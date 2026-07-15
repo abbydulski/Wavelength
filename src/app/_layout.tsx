@@ -7,10 +7,11 @@ import {
 } from '@expo-google-fonts/lora';
 import { DarkTheme, DefaultTheme, Redirect, Stack, ThemeProvider, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, useColorScheme, View } from 'react-native';
 
 import { Colors } from '@/constants/theme';
+import { supabase } from '@/lib/supabase';
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
 
 SplashScreen.preventAutoHideAsync();
@@ -20,6 +21,7 @@ function RootLayoutNav() {
   const segments = useSegments();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme === 'dark' ? 'dark' : 'light'];
+  const [hasOnboarded, setHasOnboarded] = useState<boolean | null>(null);
 
   const [fontsLoaded] = useFonts({
     Lora_400Regular,
@@ -27,6 +29,22 @@ function RootLayoutNav() {
     Lora_500Medium,
     Lora_600SemiBold,
   });
+
+  // Check onboarding status when user is logged in
+  useEffect(() => {
+    if (!session?.user) {
+      setHasOnboarded(null);
+      return;
+    }
+    supabase
+      .from('users')
+      .select('has_onboarded')
+      .eq('id', session.user.id)
+      .single()
+      .then(({ data }) => {
+        setHasOnboarded(data?.has_onboarded ?? false);
+      });
+  }, [session?.user?.id]);
 
   useEffect(() => {
     if (fontsLoaded && !loading) {
@@ -49,7 +67,18 @@ function RootLayoutNav() {
     return <Redirect href="/(auth)/login" />;
   }
   if (session && inAuthGroup) {
-    return <Redirect href="/(tabs)" />;
+    // If logged in but not onboarded, send to onboarding
+    const onOnboarding = segments[1] === 'onboarding';
+    if (hasOnboarded === false && !onOnboarding) {
+      return <Redirect href="/(auth)/onboarding" />;
+    }
+    if (hasOnboarded !== false) {
+      return <Redirect href="/(tabs)" />;
+    }
+  }
+  // If logged in, not in auth group, but hasn't onboarded yet
+  if (session && !inAuthGroup && hasOnboarded === false) {
+    return <Redirect href="/(auth)/onboarding" />;
   }
 
   return (

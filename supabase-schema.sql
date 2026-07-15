@@ -16,6 +16,7 @@ CREATE TABLE public.users (
   bio TEXT DEFAULT '',
   photo_url TEXT DEFAULT '',
   is_private BOOLEAN DEFAULT false,
+  has_onboarded BOOLEAN DEFAULT false,
   posts_count INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now()
 );
