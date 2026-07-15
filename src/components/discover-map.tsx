@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { BorderRadius, FontSize, Spacing } from '@/constants/theme';
@@ -23,7 +24,7 @@ export function DiscoverMap({ places, centerLat, centerLng, onPressPlace }: Disc
   const theme = useTheme();
 
   if (Platform.OS === 'web') {
-    return <WebMap places={places} centerLat={centerLat} centerLng={centerLng} />;
+    return <WebMap places={places} centerLat={centerLat} centerLng={centerLng} onPressPlace={onPressPlace} />;
   }
 
   // Native fallback — placeholder until react-native-maps is added
@@ -58,7 +59,7 @@ function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-function WebMap({ places, centerLat, centerLng }: { places: MapPlace[]; centerLat: number; centerLng: number }) {
+function WebMap({ places, centerLat, centerLng, onPressPlace }: { places: MapPlace[]; centerLat: number; centerLng: number; onPressPlace?: (placeId: string) => void }) {
   const markersJs = places
     .filter((p) => p.lat && p.lng)
     .map((p) => {
@@ -79,7 +80,7 @@ function WebMap({ places, centerLat, centerLng }: { places: MapPlace[]; centerLa
         }
         var ratingText = rating > 0 ? rating.toFixed(1) : 'New';
         L.marker([${p.lat}, ${p.lng}], {icon: icon}).addTo(map)
-          .bindPopup('<div style="font-family:Georgia,serif;text-align:center;padding:6px 4px;min-width:120px;"><b style="font-size:14px;color:#2C2C2A;">${escapeHtml(p.name)}</b><br><div style="margin:4px 0;">' + dots + '</div><span style="color:#6E6B63;font-size:11px;">${p.category || 'Place'} · ' + ratingText + '</span></div>', {className: 'wl-popup'});
+          .bindPopup('<div style="font-family:Georgia,serif;text-align:center;padding:6px 4px;min-width:120px;cursor:pointer;" onclick="window.parent.postMessage({type:\\'wl-place-tap\\',placeId:\\'${p.place_id}\\'},\\'*\\')"><b style="font-size:14px;color:#2C2C2A;">${escapeHtml(p.name)}</b><br><div style="margin:4px 0;">' + dots + '</div><span style="color:#6E6B63;font-size:11px;">${p.category || 'Place'} · ' + ratingText + '</span><br><span style="color:#6B8F71;font-size:12px;font-weight:600;margin-top:4px;display:inline-block;">View ratings →</span></div>', {className: 'wl-popup'});
       })();`;
     })
     .join('\n');
@@ -131,9 +132,22 @@ ${markersJs}
 </script>
 </body></html>`;
 
+  // Listen for postMessage from iframe to handle place taps
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === 'wl-place-tap' && e.data.placeId && onPressPlace) {
+        onPressPlace(e.data.placeId);
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [onPressPlace]);
+
   return (
     <View style={styles.mapContainer}>
       <iframe
+        ref={iframeRef}
         srcDoc={html}
         style={{
           width: '100%',

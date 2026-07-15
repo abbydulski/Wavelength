@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
+    Linking,
+    Platform,
     Pressable,
     StyleSheet,
     Text,
@@ -39,6 +41,8 @@ type PlaceInfo = {
   category: string;
   avg_rating: number;
   rating_count: number;
+  lat?: number;
+  lng?: number;
 };
 
 export default function PlaceDetailScreen() {
@@ -54,13 +58,29 @@ export default function PlaceDetailScreen() {
     if (!id || !user) return;
     setLoading(true);
     try {
-      // Fetch place info
+      // Fetch place info with lat/lng from geography column
       const placeRes = await supabase
         .from('places')
-        .select('id, name, address, category, avg_rating, rating_count')
+        .select('id, name, address, category, avg_rating, rating_count, location')
         .eq('id', id)
         .single();
-      if (placeRes.data) setPlace(placeRes.data);
+      if (placeRes.data) {
+        // Parse lat/lng from PostGIS geography text: POINT(lng lat)
+        let lat: number | undefined;
+        let lng: number | undefined;
+        const loc = placeRes.data.location as any;
+        if (typeof loc === 'string') {
+          const match = loc.match(/POINT\(([^ ]+) ([^ ]+)\)/);
+          if (match) {
+            lng = parseFloat(match[1]);
+            lat = parseFloat(match[2]);
+          }
+        } else if (loc?.coordinates) {
+          lng = loc.coordinates[0];
+          lat = loc.coordinates[1];
+        }
+        setPlace({ ...placeRes.data, lat, lng });
+      }
 
       // Fetch posts for this place with user info and photos
       const postsRes = await supabase
@@ -202,6 +222,33 @@ export default function PlaceDetailScreen() {
               {place.rating_count} {place.rating_count === 1 ? 'rating' : 'ratings'}
             </Text>
           </View>
+          <Pressable
+            style={[styles.directionsBtn, { backgroundColor: theme.accent }]}
+            onPress={() => {
+              const addr = encodeURIComponent(place.address || place.name);
+              const hasCoords = place.lat && place.lng && place.lat !== 0;
+              if (Platform.OS === 'web') {
+                // Google Maps in a new tab
+                const url = hasCoords
+                  ? `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`
+                  : `https://www.google.com/maps/dir/?api=1&destination=${addr}`;
+                window.open(url, '_blank');
+              } else if (Platform.OS === 'ios') {
+                const url = hasCoords
+                  ? `maps://app?daddr=${place.lat},${place.lng}`
+                  : `maps://app?daddr=${addr}`;
+                Linking.openURL(url);
+              } else {
+                const url = hasCoords
+                  ? `google.navigation:q=${place.lat},${place.lng}`
+                  : `google.navigation:q=${addr}`;
+                Linking.openURL(url).catch(() => {
+                  Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${hasCoords ? `${place.lat},${place.lng}` : addr}`);
+                });
+              }
+            }}>
+            <Text style={styles.directionsBtnText}>📍 Get Directions</Text>
+          </Pressable>
         </>
       )}
 
@@ -262,6 +309,18 @@ const styles = StyleSheet.create({
   placeAddress: { fontSize: FontSize.sm },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   ratingCountText: { fontSize: FontSize.sm },
+  directionsBtn: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.full,
+  },
+  directionsBtnText: {
+    color: '#fff',
+    fontFamily: 'Lora_600SemiBold',
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+  },
   sectionLabel: { fontSize: 11, letterSpacing: 1.5, fontWeight: '600', marginTop: Spacing.xl },
   listContent: { paddingBottom: Spacing['3xl'], gap: Spacing.md },
   ratingCard: {
