@@ -1,12 +1,12 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-  FlatList,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
+    FlatList,
+    Pressable,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -14,11 +14,11 @@ import { RecommendationCard } from '@/components/recommendation-card';
 import { SkeletonList } from '@/components/skeleton';
 import { ThemedView } from '@/components/themed-view';
 import {
-  BottomTabInset,
-  ContentContainerWeb,
-  FontSize,
-  Spacing,
-  WebNavHeight
+    BottomTabInset,
+    ContentContainerWeb,
+    FontSize,
+    Spacing,
+    WebNavHeight
 } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
@@ -195,7 +195,7 @@ export default function FeedScreen() {
         photoUrls={item.photo_urls}
         createdAt={item.created_at}
         isNetwork
-        onPressPlace={() => router.push(`/place/${item.place_id}`)}
+        onPressPlace={() => router.push('/(tabs)/discover')}
         onPressUser={() => router.push(`/user/${item.user_id}`)}
         postId={item.id}
         agreeCount={reactions[item.id]?.agree ?? 0}
