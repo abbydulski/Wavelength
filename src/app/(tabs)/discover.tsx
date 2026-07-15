@@ -73,7 +73,7 @@ export default function DiscoverScreen() {
   return (
     <ThemedView style={styles.container}>
       {/* Floating header */}
-      <View style={[styles.floatingHeader, { paddingTop: WebNavHeight + Spacing.lg }]}>
+      <View style={[styles.floatingHeader, { paddingTop: WebNavHeight + Spacing.lg, backgroundColor: theme.background + 'E6' }]}>
         <Text style={[styles.title, { color: theme.text }]}>Discover</Text>
         <ScrollView
           horizontal

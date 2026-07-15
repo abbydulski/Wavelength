@@ -97,14 +97,25 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
   subdomains: 'abcd'
 }).addTo(map);
 
-// You are here — subtle pulse dot
+// 100-mile radius
+L.circle([${centerLat}, ${centerLng}], {
+  radius: 160934,
+  color: '#9B9B9B',
+  weight: 0.75,
+  opacity: 0.4,
+  fillColor: '#9B9B9B',
+  fillOpacity: 0.03,
+  dashArray: '4, 6'
+}).addTo(map);
+
+// You are here
 L.circleMarker([${centerLat}, ${centerLng}], {
-  radius: 4,
+  radius: 5,
   fillColor: '#2C2C2A',
   color: '#fff',
-  weight: 1.5,
-  fillOpacity: 0.9
-}).addTo(map);
+  weight: 2,
+  fillOpacity: 1
+}).addTo(map).bindPopup('<div style="font-family:Georgia,serif;text-align:center;font-size:12px;color:#2C2C2A;padding:2px;">You are here</div>', {className: 'wl-popup', closeButton: false});
 
 ${markersJs}
 </script>
