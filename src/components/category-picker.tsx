@@ -1,6 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 
-import { BorderRadius, FontSize, Spacing } from '@/constants/theme';
+import { FontSize, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export const CATEGORIES = [
@@ -42,14 +42,13 @@ export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
             style={[
               styles.pill,
               {
-                backgroundColor: isSelected ? theme.accent : theme.backgroundElement,
-                borderColor: isSelected ? theme.accent : theme.border,
+                borderBottomColor: isSelected ? theme.text : 'transparent',
               },
             ]}>
             <Text
               style={[
                 styles.pillText,
-                { color: isSelected ? theme.accentText : theme.textSecondary },
+                { color: isSelected ? theme.text : theme.textTertiary },
               ]}>
               {cat.label}
             </Text>
@@ -63,17 +62,15 @@ export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    gap: Spacing.md,
+    gap: Spacing.lg,
     paddingVertical: Spacing.xs,
   },
   pill: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
+    paddingBottom: Spacing.sm,
+    borderBottomWidth: 1.5,
   },
   pillText: {
+    fontFamily: 'Lora_500Medium',
     fontSize: FontSize.sm,
-    fontWeight: '500',
   },
 });

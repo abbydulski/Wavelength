@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 
-import { BorderRadius, FontSize, Spacing } from '@/constants/theme';
+import { FontSize, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 type MapPlace = {
@@ -27,32 +27,22 @@ export function DiscoverMap({ places, centerLat, centerLng, onPressPlace }: Disc
     return <WebMap places={places} centerLat={centerLat} centerLng={centerLng} onPressPlace={onPressPlace} />;
   }
 
-  // Native fallback — placeholder until react-native-maps is added
   return (
     <View style={[styles.fallback, { backgroundColor: theme.backgroundElement }]}>
       <Text style={[styles.fallbackText, { color: theme.textSecondary }]}>
-        🗺️ {places.length} places nearby
+        {places.length} places nearby
       </Text>
     </View>
   );
 }
 
 function ratingColor(rating: number): string {
-  if (rating <= 0) return '#E4E0D7';
-  if (rating <= 1.5) return '#D4837A';
-  if (rating <= 2.5) return '#D4A07A';
-  if (rating <= 3.5) return '#C9B86C';
-  if (rating <= 4.5) return '#8DB87A';
-  return '#6AAF6A';
-}
-
-function categoryEmoji(category: string): string {
-  const map: Record<string, string> = {
-    food: '🍽️', coffee: '☕', drinks: '🍸', dessert: '🍰', outdoors: '🌿',
-    shopping: '🛍️', culture: '🎨', nightlife: '🌙', wellness: '💆',
-    gym: '💪', fitness: '💪', sports: '⚽', activities: '🎯', travel: '✈️',
-  };
-  return map[category?.toLowerCase()] || '📍';
+  if (rating <= 0) return '#B0ADA6';
+  if (rating <= 1.5) return '#C4837A';
+  if (rating <= 2.5) return '#C4A07A';
+  if (rating <= 3.5) return '#B9A86C';
+  if (rating <= 4.5) return '#7DA87A';
+  return '#5A9F5A';
 }
 
 function escapeHtml(str: string): string {
@@ -64,23 +54,20 @@ function WebMap({ places, centerLat, centerLng, onPressPlace }: { places: MapPla
     .filter((p) => p.lat && p.lng)
     .map((p) => {
       const color = ratingColor(p.avg_rating);
-      const emoji = categoryEmoji(p.category);
+      const size = 10;
       return `(function(){
         var icon = L.divIcon({
           className: 'wl-marker',
-          html: '<div style="background:${color};width:36px;height:36px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;">${emoji}</div>',
-          iconSize: [36, 36],
-          iconAnchor: [18, 18],
-          popupAnchor: [0, -20]
+          html: '<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;"></div>',
+          iconSize: [${size}, ${size}],
+          iconAnchor: [${size / 2}, ${size / 2}],
+          popupAnchor: [0, -${size / 2 + 2}]
         });
         var rating = ${p.avg_rating || 0};
-        var dots = '';
-        for (var i = 1; i <= 5; i++) {
-          dots += '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 2px;background:' + (i <= Math.round(rating) ? '${color}' : '#E4E0D7') + ';"></span>';
-        }
-        var ratingText = rating > 0 ? rating.toFixed(1) : 'New';
+        var ratingText = rating > 0 ? rating.toFixed(1) : '';
+        var ratingLine = ratingText ? '<span style="color:${color};font-size:12px;font-style:italic;">' + ratingText + '</span><br>' : '';
         L.marker([${p.lat}, ${p.lng}], {icon: icon}).addTo(map)
-          .bindPopup('<div style="font-family:Georgia,serif;text-align:center;padding:6px 4px;min-width:120px;cursor:pointer;" onclick="window.parent.postMessage({type:\\'wl-place-tap\\',placeId:\\'${p.place_id}\\'},\\'*\\')"><b style="font-size:14px;color:#2C2C2A;">${escapeHtml(p.name)}</b><br><div style="margin:4px 0;">' + dots + '</div><span style="color:#6E6B63;font-size:11px;">${p.category || 'Place'} · ' + ratingText + '</span><br><span style="color:#6B8F71;font-size:12px;font-weight:600;margin-top:4px;display:inline-block;">View ratings →</span></div>', {className: 'wl-popup'});
+          .bindPopup('<div style="font-family:Georgia,Lora,serif;text-align:left;padding:4px 2px;min-width:100px;cursor:pointer;" onclick="window.parent.postMessage({type:\\'wl-place-tap\\',placeId:\\'${p.place_id}\\'},\\'*\\')"><div style="font-size:13px;font-weight:600;color:#2C2C2A;line-height:1.3;margin-bottom:3px;">${escapeHtml(p.name)}</div>' + ratingLine + '<span style="font-size:10px;letter-spacing:0.5px;color:#9B9B9B;text-transform:uppercase;">${p.category || ''}</span></div>', {className: 'wl-popup', closeButton: false});
       })();`;
     })
     .join('\n');
@@ -93,46 +80,36 @@ function WebMap({ places, centerLat, centerLng, onPressPlace }: { places: MapPla
 <style>
   html,body,#map{margin:0;padding:0;width:100%;height:100%;}
   .wl-marker{background:none!important;border:none!important;}
-  .wl-popup .leaflet-popup-content-wrapper{border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.12);border:1px solid #E4E0D7;}
+  .wl-popup .leaflet-popup-content-wrapper{border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,0.1);border:none;padding:2px;}
   .wl-popup .leaflet-popup-tip{border-top-color:#fff;}
-  .leaflet-control-attribution{font-size:9px!important;opacity:0.6;}
+  .leaflet-popup-content{margin:8px 10px;}
+  .leaflet-control-attribution{font-size:9px!important;opacity:0.4;}
+  .leaflet-control-zoom a{width:28px!important;height:28px!important;line-height:28px!important;font-size:14px!important;color:#6B6B6B!important;border-color:#E4E0D7!important;}
 </style>
 </head><body>
 <div id="map"></div>
 <script>
-var map = L.map('map', {zoomControl: false}).setView([${centerLat}, ${centerLng}], 9);
+var map = L.map('map', {zoomControl: false}).setView([${centerLat}, ${centerLng}], 10);
 L.control.zoom({position: 'bottomright'}).addTo(map);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
   maxZoom: 19,
   subdomains: 'abcd'
 }).addTo(map);
 
-// 100-mile radius circle (160934 meters)
-L.circle([${centerLat}, ${centerLng}], {
-  radius: 160934,
-  color: '#4A5E3B',
-  weight: 1.5,
-  opacity: 0.5,
-  fillColor: '#4A5E3B',
-  fillOpacity: 0.04,
-  dashArray: '6, 6'
-}).addTo(map);
-
-// "You are here" marker
+// You are here — subtle pulse dot
 L.circleMarker([${centerLat}, ${centerLng}], {
-  radius: 6,
-  fillColor: '#4A5E3B',
+  radius: 4,
+  fillColor: '#2C2C2A',
   color: '#fff',
-  weight: 2,
-  fillOpacity: 1
-}).addTo(map).bindPopup('<div style="font-family:Georgia,serif;text-align:center;font-size:13px;color:#2C2C2A;"><b>You are here</b><br><span style="color:#6E6B63;font-size:11px;">100-mile radius</span></div>');
+  weight: 1.5,
+  fillOpacity: 0.9
+}).addTo(map);
 
 ${markersJs}
 </script>
 </body></html>`;
 
-  // Listen for postMessage from iframe to handle place taps
   const iframeRef = useRef<HTMLIFrameElement>(null);
   useEffect(() => {
     const handler = (e: MessageEvent) => {
@@ -153,7 +130,6 @@ ${markersJs}
           width: '100%',
           height: '100%',
           border: 'none',
-          borderRadius: BorderRadius.lg,
         }}
         title="Discover Map"
       />
@@ -163,19 +139,17 @@ ${markersJs}
 
 const styles = StyleSheet.create({
   mapContainer: {
-    height: 420,
-    borderRadius: BorderRadius.lg,
-    overflow: 'hidden',
+    flex: 1,
   },
   fallback: {
-    height: 200,
-    borderRadius: BorderRadius.lg,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     gap: Spacing.md,
   },
   fallbackText: {
-    fontSize: FontSize.lg,
-    fontWeight: '600',
+    fontSize: FontSize.base,
+    fontFamily: 'Lora_400Regular_Italic',
+    fontStyle: 'italic',
   },
 });

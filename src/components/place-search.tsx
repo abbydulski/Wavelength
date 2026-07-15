@@ -8,7 +8,7 @@ import {
     View
 } from 'react-native';
 
-import { BorderRadius, FontSize, Spacing } from '@/constants/theme';
+import { FontSize, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type PlaceResult = {
@@ -103,13 +103,13 @@ export function PlaceSearch({ onSelect, selectedPlace, onClear }: PlaceSearchPro
 
   if (selectedPlace) {
     return (
-      <View style={[styles.selectedContainer, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+      <View style={[styles.selectedContainer, { borderBottomColor: theme.border }]}>
         <View style={styles.selectedInfo}>
           <Text style={[styles.selectedName, { color: theme.text }]}>{selectedPlace.name}</Text>
-          <Text style={[styles.selectedAddress, { color: theme.textSecondary }]}>{selectedPlace.address}</Text>
+          <Text style={[styles.selectedAddress, { color: theme.textTertiary }]}>{selectedPlace.address}</Text>
         </View>
         <Pressable onPress={onClear} hitSlop={8}>
-          <Text style={[styles.clearButton, { color: theme.destructive }]}>Change</Text>
+          <Text style={[styles.clearButton, { color: theme.accent }]}>Change</Text>
         </Pressable>
       </View>
     );
@@ -117,7 +117,7 @@ export function PlaceSearch({ onSelect, selectedPlace, onClear }: PlaceSearchPro
 
   return (
     <View>
-      <View style={[styles.inputContainer, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+      <View style={[styles.inputContainer, { borderBottomColor: theme.border }]}>
         <TextInput
           style={[styles.input, { color: theme.text }]}
           placeholder="Search for a place..."
@@ -129,21 +129,20 @@ export function PlaceSearch({ onSelect, selectedPlace, onClear }: PlaceSearchPro
         {loading && <ActivityIndicator size="small" color={theme.accent} />}
       </View>
       {results.length > 0 && (
-        <View style={[styles.resultsList, { backgroundColor: theme.card, borderColor: theme.border }]}>
+        <View style={styles.resultsList}>
           {results.map((item) => (
             <Pressable
               key={item.placeId}
-              style={({ pressed }) => [styles.resultItem, pressed && { backgroundColor: theme.backgroundElement }]}
+              style={[styles.resultItem, { borderBottomColor: theme.border }]}
               onPress={() => {
-                // Fetch place details to get coordinates
-              fetchPlaceDetails(item).then((enriched) => {
-                onSelect(enriched);
-              });
+                fetchPlaceDetails(item).then((enriched) => {
+                  onSelect(enriched);
+                });
                 setQuery('');
                 setResults([]);
               }}>
               <Text style={[styles.resultName, { color: theme.text }]}>{item.name}</Text>
-              <Text style={[styles.resultAddress, { color: theme.textSecondary }]}>{item.address}</Text>
+              <Text style={[styles.resultAddress, { color: theme.textTertiary }]}>{item.address}</Text>
             </Pressable>
           ))}
         </View>
@@ -156,32 +155,35 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    paddingHorizontal: Spacing.lg,
-    height: 48,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: Spacing.xs,
+    height: 44,
   },
-  input: { flex: 1, fontSize: FontSize.base },
+  input: {
+    flex: 1,
+    fontSize: FontSize.base,
+    fontFamily: 'Lora_400Regular',
+  },
   resultsList: {
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
     marginTop: Spacing.xs,
     maxHeight: 240,
-    overflow: 'hidden',
   },
-  resultItem: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
+  resultItem: {
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
   resultName: { fontSize: FontSize.base, fontFamily: 'Lora_500Medium' },
-  resultAddress: { fontSize: FontSize.sm, marginTop: 2 },
+  resultAddress: { fontSize: 12, marginTop: 2 },
   selectedContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    paddingHorizontal: Spacing.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: Spacing.xs,
     paddingVertical: Spacing.md,
   },
   selectedInfo: { flex: 1 },
-  selectedName: { fontFamily: 'Lora_500Medium', fontSize: FontSize.base },
-  selectedAddress: { fontSize: FontSize.sm, marginTop: 2 },
-  clearButton: { fontSize: FontSize.sm, fontFamily: 'Lora_600SemiBold' },
+  selectedName: { fontFamily: 'Lora_600SemiBold', fontSize: FontSize.base },
+  selectedAddress: { fontSize: 12, marginTop: 2 },
+  clearButton: { fontSize: 12, fontFamily: 'Lora_500Medium' },
 });

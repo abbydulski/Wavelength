@@ -1,23 +1,18 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
-    FlatList,
+    ActivityIndicator,
     Pressable,
-    RefreshControl,
     ScrollView,
     StyleSheet,
     Text,
     View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CATEGORIES } from '@/components/category-picker';
 import { DiscoverMap } from '@/components/discover-map';
-import { SkeletonList } from '@/components/skeleton';
-import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { WavelengthRating } from '@/components/wavelength-rating';
-import { BorderRadius, BottomTabInset, ContentContainerWeb, FontSize, Spacing, WebNavHeight } from '@/constants/theme';
+import { FontSize, Spacing, WebNavHeight } from '@/constants/theme';
 import { useLocation } from '@/hooks/use-location';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
@@ -43,9 +38,7 @@ export default function DiscoverScreen() {
   const { location: userLocation, loading: locationLoading } = useLocation();
   const [places, setPlaces] = useState<DiscoverPlace[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [viewMode, setViewMode] = useState<'list' | 'map'>('map');
 
   const fetchPlaces = useCallback(async () => {
     if (!userLocation) return;
@@ -77,200 +70,122 @@ export default function DiscoverScreen() {
     return places.filter((p) => p.category === selectedCategory);
   }, [places, selectedCategory]);
 
-  const renderPlace = ({ item }: { item: DiscoverPlace }) => (
-    <Pressable
-      style={[styles.placeCard, { backgroundColor: theme.card, borderColor: theme.border }]}
-      onPress={() => router.push(`/place/${item.place_id}`)}>
-      <View style={styles.placeTop}>
-        <Text style={[styles.placeCategory, { color: theme.rust }]}>
-          {item.category?.toUpperCase() || 'PLACE'}
-        </Text>
-        <Text style={[styles.placeDistance, { color: theme.textTertiary }]}>
-          {item.distance_miles.toFixed(1)} mi
-        </Text>
-      </View>
-      <Text style={[styles.placeName, { color: theme.text }]}>{item.name}</Text>
-      <Text style={[styles.placeAddress, { color: theme.textSecondary }]} numberOfLines={1}>
-        {item.address}
-      </Text>
-      <View style={styles.placeBottom}>
-        <WavelengthRating rating={item.avg_rating} size="sm" />
-        <Text style={[styles.ratingCount, { color: theme.textTertiary }]}>
-          {item.rating_count} {item.rating_count === 1 ? 'rating' : 'ratings'}
-        </Text>
-      </View>
-    </Pressable>
-  );
-
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <View style={styles.header}>
-          <View style={styles.headerRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.title, { color: theme.text }]}>Discover</Text>
-              <ThemedText themeColor="textSecondary" style={styles.subtitle}>
-                Rated places near you
-              </ThemedText>
-            </View>
-            <Pressable
-              onPress={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
-              style={[styles.viewToggle, { backgroundColor: theme.backgroundElement }]}>
-              <Text style={[styles.viewToggleText, { color: theme.text }]}>
-                {viewMode === 'list' ? '🗺️ Map' : '📋 List'}
-              </Text>
-            </Pressable>
-          </View>
-
-          {/* Category filter */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterRow}>
-            {FILTER_CATEGORIES.map((cat) => {
-              const isActive = selectedCategory === cat.key;
-              return (
-                <Pressable
-                  key={cat.key}
-                  onPress={() => setSelectedCategory(cat.key)}
+      {/* Floating header */}
+      <View style={[styles.floatingHeader, { paddingTop: WebNavHeight + Spacing.lg }]}>
+        <Text style={[styles.title, { color: theme.text }]}>Discover</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterRow}>
+          {FILTER_CATEGORIES.map((cat) => {
+            const isActive = selectedCategory === cat.key;
+            return (
+              <Pressable
+                key={cat.key}
+                onPress={() => setSelectedCategory(cat.key)}>
+                <Text
                   style={[
-                    styles.filterPill,
+                    styles.filterText,
                     {
-                      backgroundColor: isActive ? theme.accent : theme.backgroundElement,
-                      borderColor: isActive ? theme.accent : theme.border,
+                      color: isActive ? theme.text : theme.textTertiary,
+                      borderBottomColor: isActive ? theme.text : 'transparent',
                     },
                   ]}>
-                  <Text
-                    style={[
-                      styles.filterText,
-                      { color: isActive ? theme.accentText : theme.textSecondary },
-                    ]}>
-                    {cat.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
+                  {cat.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
 
-        {loading || locationLoading ? (
-          <SkeletonList count={4} type="place" />
-        ) : filteredPlaces.length === 0 ? (
-          <View style={styles.centered}>
-            <Text style={[styles.emptyTitle, { color: theme.text }]}>No places yet</Text>
-            <ThemedText themeColor="textSecondary" style={styles.emptySubtitle}>
-              {selectedCategory ? 'No places in this category nearby.' : 'Be the first to rate a place nearby!'}
-            </ThemedText>
-          </View>
-        ) : (
-          <FlatList
-            data={filteredPlaces}
-            keyExtractor={(item) => item.place_id}
-            renderItem={viewMode === 'list' ? renderPlace : renderPlace}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            ListHeaderComponent={
-              viewMode === 'map' && userLocation ? (
-                <View style={styles.mapWrapper}>
-                  <DiscoverMap
-                    places={filteredPlaces}
-                    centerLat={userLocation.latitude}
-                    centerLng={userLocation.longitude}
-                    onPressPlace={(id) => router.push(`/place/${id}`)}
-                  />
-                </View>
-              ) : null
-            }
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={async () => {
-                  setRefreshing(true);
-                  await fetchPlaces();
-                  setRefreshing(false);
-                }}
-                tintColor={theme.accent}
-              />
-            }
-          />
-        )}
-      </SafeAreaView>
+      {/* Full-page map */}
+      {loading || locationLoading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={theme.accent} />
+        </View>
+      ) : filteredPlaces.length === 0 ? (
+        <View style={styles.centered}>
+          <Text style={[styles.emptyTitle, { color: theme.text }]}>No places yet</Text>
+          <Text style={[styles.emptyBody, { color: theme.textSecondary }]}>
+            {selectedCategory ? 'Nothing in this category nearby.' : 'Be the first to rate a place.'}
+          </Text>
+        </View>
+      ) : userLocation ? (
+        <DiscoverMap
+          places={filteredPlaces}
+          centerLat={userLocation.latitude}
+          centerLng={userLocation.longitude}
+          onPressPlace={(id) => router.push(`/place/${id}`)}
+        />
+      ) : null}
+
+      {/* Place count */}
+      {!loading && filteredPlaces.length > 0 && (
+        <View style={[styles.countBadge, { backgroundColor: theme.background }]}>
+          <Text style={[styles.countText, { color: theme.textTertiary }]}>
+            {filteredPlaces.length} {filteredPlaces.length === 1 ? 'place' : 'places'}
+          </Text>
+        </View>
+      )}
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  safeArea: { flex: 1 },
-  header: {
+  floatingHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
     paddingHorizontal: Spacing.xl,
-    paddingTop: WebNavHeight + Spacing.xl,
     paddingBottom: Spacing.md,
-    gap: Spacing.md,
-    ...ContentContainerWeb,
   },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  title: { fontFamily: 'Lora_600SemiBold', fontSize: FontSize['2xl'] },
-  subtitle: { fontSize: FontSize.base },
-  viewToggle: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.lg,
-  },
-  viewToggleText: { fontSize: FontSize.sm, fontWeight: '600' },
-  filterRow: {
-    gap: Spacing.md,
-  },
-  filterPill: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm + 2,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-  },
-  filterText: { fontSize: FontSize.xs, fontWeight: '600' },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: Spacing.md },
-  emptyTitle: { fontFamily: 'Lora_500Medium', fontSize: FontSize.lg },
-  emptySubtitle: { fontSize: FontSize.base, textAlign: 'center' },
-  mapWrapper: {
-    marginBottom: Spacing.lg,
-  },
-  listContent: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: BottomTabInset + Spacing['2xl'],
-    gap: Spacing.md,
-    ...ContentContainerWeb,
-  },
-  placeCard: {
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    padding: Spacing.xl,
-    gap: Spacing.md,
-  },
-  placeTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  placeCategory: {
-    fontSize: 11,
-    letterSpacing: 1.5,
-    fontWeight: '500',
-  },
-  placeDistance: { fontSize: FontSize.xs },
-  placeName: {
-    fontFamily: 'Lora_500Medium',
+  title: {
+    fontFamily: 'Lora_600SemiBold',
     fontSize: FontSize.xl,
-    lineHeight: 28,
+    marginBottom: Spacing.sm,
   },
-  placeAddress: { fontSize: FontSize.sm },
-  placeBottom: {
-    flexDirection: 'row',
+  filterRow: {
+    gap: Spacing.lg,
+    paddingRight: Spacing.xl,
+  },
+  filterText: {
+    fontFamily: 'Lora_500Medium',
+    fontSize: 12,
+    paddingBottom: Spacing.xs,
+    borderBottomWidth: 1.5,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
     gap: Spacing.md,
   },
-  ratingCount: { fontSize: FontSize.xs },
+  emptyTitle: {
+    fontFamily: 'Lora_600SemiBold',
+    fontSize: FontSize.lg,
+  },
+  emptyBody: {
+    fontFamily: 'Lora_400Regular_Italic',
+    fontStyle: 'italic',
+    fontSize: FontSize.sm,
+  },
+  countBadge: {
+    position: 'absolute',
+    bottom: Spacing['3xl'] + Spacing['3xl'],
+    alignSelf: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.xs,
+    borderRadius: 20,
+    opacity: 0.85,
+  },
+  countText: {
+    fontFamily: 'Lora_400Regular',
+    fontSize: 11,
+  },
 });

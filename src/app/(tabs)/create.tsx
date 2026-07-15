@@ -18,9 +18,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CategoryPicker, type CategoryKey } from '@/components/category-picker';
 import { PlaceSearch, type PlaceResult } from '@/components/place-search';
 import { RatingPicker } from '@/components/rating-picker';
-import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { BorderRadius, BottomTabInset, ContentContainerWeb, FontSize, Spacing, WebNavHeight } from '@/constants/theme';
+import { BottomTabInset, ContentContainerWeb, FontSize, Spacing, WebNavHeight } from '@/constants/theme';
 import { useLocation } from '@/hooks/use-location';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
@@ -213,13 +212,13 @@ export default function CreateScreen() {
             keyboardShouldPersistTaps="handled">
             {/* Header */}
             <Text style={[styles.title, { color: theme.text }]}>Share a place</Text>
-            <ThemedText themeColor="textSecondary" style={styles.subtitle}>
+            <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
               Recommend somewhere you love.
-            </ThemedText>
+            </Text>
 
             {/* Place search */}
             <View style={styles.section}>
-              <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>PLACE</Text>
+              <Text style={[styles.sectionLabel, { color: theme.textTertiary }]}>PLACE</Text>
               <PlaceSearch
                 selectedPlace={place}
                 onSelect={setPlace}
@@ -227,14 +226,13 @@ export default function CreateScreen() {
               />
               {!place && (
                 <Pressable
-                  style={[styles.currentLocationBtn, { borderColor: theme.border }]}
                   onPress={useCurrentLocation}
                   disabled={gettingLocation}>
                   {gettingLocation ? (
                     <ActivityIndicator size="small" color={theme.accent} />
                   ) : (
                     <Text style={[styles.currentLocationText, { color: theme.accent }]}>
-                      📍 Use current location
+                      or use current location →
                     </Text>
                   )}
                 </Pressable>
@@ -243,26 +241,25 @@ export default function CreateScreen() {
 
             {/* Photos */}
             <View style={styles.section}>
-              <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>
-                PHOTOS {photos.length > 0 ? `(${photos.length}/5)` : ''}
+              <Text style={[styles.sectionLabel, { color: theme.textTertiary }]}>
+                PHOTOS {photos.length > 0 ? `${photos.length}/5` : ''}
               </Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photosRow}>
                 {photos.map((photo, i) => (
                   <View key={i} style={styles.photoWrapper}>
                     <Image source={{ uri: photo.uri }} style={styles.photoThumb} />
                     <Pressable
-                      style={[styles.removePhoto, { backgroundColor: theme.destructive }]}
+                      style={styles.removePhoto}
                       onPress={() => removePhoto(i)}>
-                      <Text style={styles.removePhotoText}>×</Text>
+                      <Text style={[styles.removePhotoText, { color: theme.textTertiary }]}>×</Text>
                     </Pressable>
                   </View>
                 ))}
                 {photos.length < 5 && (
                   <Pressable
-                    style={[styles.addPhotoButton, { borderColor: theme.border, backgroundColor: theme.backgroundElement }]}
+                    style={[styles.addPhotoButton, { borderBottomColor: theme.border }]}
                     onPress={pickImage}>
                     <Text style={[styles.addPhotoPlus, { color: theme.textTertiary }]}>+</Text>
-                    <Text style={[styles.addPhotoLabel, { color: theme.textTertiary }]}>Add</Text>
                   </Pressable>
                 )}
               </ScrollView>
@@ -270,24 +267,23 @@ export default function CreateScreen() {
 
             {/* Rating */}
             <View style={styles.section}>
-              <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>YOUR RATING</Text>
+              <Text style={[styles.sectionLabel, { color: theme.textTertiary }]}>YOUR RATING</Text>
               <RatingPicker value={rating} onChange={setRating} />
             </View>
 
             {/* Category */}
             <View style={styles.section}>
-              <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>CATEGORY</Text>
+              <Text style={[styles.sectionLabel, { color: theme.textTertiary }]}>CATEGORY</Text>
               <CategoryPicker value={category} onChange={setCategory} />
             </View>
 
             {/* Caption */}
             <View style={styles.section}>
-              <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>YOUR NOTE</Text>
+              <Text style={[styles.sectionLabel, { color: theme.textTertiary }]}>YOUR NOTE</Text>
               <TextInput
                 style={[styles.captionInput, {
                   color: theme.text,
-                  backgroundColor: theme.backgroundElement,
-                  borderColor: theme.border,
+                  borderBottomColor: theme.border,
                 }]}
                 placeholder="What makes this place special?"
                 placeholderTextColor={theme.textTertiary}
@@ -335,53 +331,47 @@ const styles = StyleSheet.create({
     ...ContentContainerWeb,
   },
   title: { fontFamily: 'Lora_600SemiBold', fontSize: FontSize['2xl'] },
-  subtitle: { fontSize: FontSize.base, marginTop: -Spacing.lg },
+  subtitle: {
+    fontFamily: 'Lora_400Regular_Italic',
+    fontStyle: 'italic',
+    fontSize: FontSize.sm,
+    marginTop: -Spacing.lg,
+  },
   section: { gap: Spacing.md },
-  sectionLabel: { fontSize: 11, letterSpacing: 1.5, fontWeight: '600' },
-  currentLocationBtn: {
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderRadius: BorderRadius.full,
-    paddingVertical: Spacing.sm + 2,
-    paddingHorizontal: Spacing.lg,
-  },
+  sectionLabel: { fontSize: 10, letterSpacing: 1.8, fontWeight: '500' },
   currentLocationText: {
-    fontSize: FontSize.xs,
-    fontWeight: '500',
+    fontFamily: 'Lora_500Medium',
+    fontSize: 12,
+    marginTop: Spacing.xs,
   },
-  photosRow: { gap: Spacing.md },
+  photosRow: { gap: Spacing.md, alignItems: 'flex-end' },
   photoWrapper: { position: 'relative' },
-  photoThumb: { width: 80, height: 80, borderRadius: BorderRadius.md },
+  photoThumb: { width: 72, height: 72, borderRadius: 4 },
   removePhoto: {
     position: 'absolute',
-    top: -6,
-    right: -6,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    top: -4,
+    right: -4,
+    width: 20,
+    height: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  removePhotoText: { color: '#fff', fontSize: 14, fontWeight: '700', lineHeight: 16 },
+  removePhotoText: { fontSize: 16, lineHeight: 18 },
   addPhotoButton: {
-    width: 80,
-    height: 80,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderStyle: 'dashed',
+    width: 72,
+    height: 72,
+    borderBottomWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
   addPhotoPlus: { fontSize: 24, lineHeight: 28 },
-  addPhotoLabel: { fontSize: 11 },
   captionInput: {
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: Spacing.xs,
+    paddingTop: Spacing.sm,
     paddingBottom: Spacing.lg,
     fontSize: FontSize.base,
-    minHeight: 100,
+    minHeight: 80,
     fontFamily: 'Lora_400Regular',
   },
   charCount: { fontSize: FontSize.xs, textAlign: 'right' },
