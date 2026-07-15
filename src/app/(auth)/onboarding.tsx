@@ -1,5 +1,4 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
 import {
     Image,
     Pressable,
@@ -10,43 +9,19 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedView } from '@/components/themed-view';
-import { BorderRadius, FontSize, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/providers/auth-provider';
-
-const SLIDES = [
-  {
-    emoji: '👋',
-    title: 'Welcome to Wavelength',
-    body: 'A place to share and discover recommendations from people you actually trust — your friends.',
-  },
-  {
-    emoji: '📍',
-    title: 'How it works',
-    body: 'Rate a place you love, add photos and a caption. Your friends see it in their feed and can discover it on the map.',
-  },
-  {
-    emoji: '🌿',
-    title: 'No algorithms, just trust',
-    body: 'No ads, no influencers, no strangers. Just honest recommendations from your circle, all within 100 miles.',
-  },
-];
+import { useAuth, useOnboarding } from '@/providers/auth-provider';
 
 export default function OnboardingScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { user } = useAuth();
-  const [step, setStep] = useState(0);
-  const slide = SLIDES[step];
-  const isLast = step === SLIDES.length - 1;
+  const { completeOnboarding } = useOnboarding();
 
   const handleFinish = async () => {
     if (user) {
-      await supabase
-        .from('users')
-        .update({ has_onboarded: true })
-        .eq('id', user.id);
+      await completeOnboarding(user.id);
     }
     router.replace('/(tabs)');
   };
@@ -54,49 +29,35 @@ export default function OnboardingScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.content}>
+        <Pressable onPress={handleFinish} style={styles.inner}>
+          <View style={styles.spacer} />
+
           <Image
             source={require('../../../public/Wavelength_Logo.png')}
             style={styles.logo}
             resizeMode="contain"
           />
 
-          <Text style={styles.emoji}>{slide.emoji}</Text>
-          <Text style={[styles.title, { color: theme.text }]}>{slide.title}</Text>
-          <Text style={[styles.body, { color: theme.textSecondary }]}>{slide.body}</Text>
+          <Text style={[styles.title, { color: theme.text }]}>Wavelength</Text>
 
-          {/* Dots */}
-          <View style={styles.dots}>
-            {SLIDES.map((_, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.dot,
-                  { backgroundColor: i === step ? theme.accent : theme.border },
-                ]}
-              />
-            ))}
-          </View>
-        </View>
+          <View style={styles.divider} />
 
-        <View style={styles.footer}>
-          {step > 0 && (
-            <Pressable onPress={() => setStep(step - 1)} style={styles.backBtn}>
-              <Text style={[styles.backText, { color: theme.textSecondary }]}>Back</Text>
-            </Pressable>
-          )}
-          <Pressable
-            onPress={isLast ? handleFinish : () => setStep(step + 1)}
-            style={[styles.nextBtn, { backgroundColor: theme.accent, marginLeft: step > 0 ? 0 : 'auto' }]}>
-            <Text style={styles.nextText}>{isLast ? 'Get started' : 'Next'}</Text>
-          </Pressable>
-        </View>
+          <Text style={[styles.body, { color: theme.textSecondary }]}>
+            Recommendations from people{'\n'}you actually trust.
+          </Text>
 
-        {!isLast && (
-          <Pressable onPress={handleFinish} style={styles.skipBtn}>
-            <Text style={[styles.skipText, { color: theme.textTertiary }]}>Skip</Text>
-          </Pressable>
-        )}
+          <Text style={[styles.detail, { color: theme.textTertiary }]}>
+            Rate the places you love. Your friends{'\n'}
+            discover them. No algorithms, no strangers.{'\n'}
+            Just your circle, nearby.
+          </Text>
+
+          <View style={styles.spacer} />
+
+          <Text style={[styles.cta, { color: theme.accent }]}>
+            tap anywhere to begin
+          </Text>
+        </Pressable>
       </SafeAreaView>
     </ThemedView>
   );
@@ -105,42 +66,45 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
-  content: {
+  inner: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: Spacing['2xl'],
-    gap: Spacing.lg,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing['3xl'],
   },
-  logo: { width: 64, height: 64, marginBottom: Spacing.md },
-  emoji: { fontSize: 48, marginBottom: Spacing.md },
-  title: { fontFamily: 'Lora_600SemiBold', fontSize: FontSize['2xl'], textAlign: 'center' },
+  spacer: { flex: 1 },
+  logo: { width: 56, height: 56, marginBottom: Spacing['2xl'] },
+  title: {
+    fontFamily: 'Lora_600SemiBold',
+    fontSize: 32,
+    letterSpacing: 0.5,
+    marginBottom: Spacing.xl,
+  },
+  divider: {
+    width: 32,
+    height: 1,
+    backgroundColor: '#C4B9A8',
+    marginBottom: Spacing.xl,
+  },
   body: {
     fontFamily: 'Lora_400Regular_Italic',
     fontStyle: 'italic',
-    fontSize: FontSize.base,
-    lineHeight: 24,
+    fontSize: 18,
+    lineHeight: 28,
     textAlign: 'center',
-    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
-  dots: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.xl },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.xl,
-    paddingBottom: Spacing.xl,
+  detail: {
+    fontFamily: 'Lora_400Regular',
+    fontSize: 14,
+    lineHeight: 22,
+    textAlign: 'center',
   },
-  backBtn: { paddingVertical: Spacing.lg, paddingHorizontal: Spacing.xl },
-  backText: { fontFamily: 'Lora_600SemiBold', fontSize: FontSize.base },
-  nextBtn: {
-    paddingVertical: Spacing.lg,
-    paddingHorizontal: Spacing['2xl'],
-    borderRadius: BorderRadius.full,
-    marginLeft: 'auto',
+  cta: {
+    fontFamily: 'Lora_400Regular_Italic',
+    fontStyle: 'italic',
+    fontSize: 13,
+    letterSpacing: 0.5,
+    marginBottom: Spacing['2xl'],
   },
-  nextText: { color: '#fff', fontFamily: 'Lora_600SemiBold', fontSize: FontSize.base },
-  skipBtn: { alignItems: 'center', paddingBottom: Spacing.lg },
-  skipText: { fontSize: FontSize.sm },
 });

@@ -305,15 +305,15 @@ export default function CreateScreen() {
             {/* Submit */}
             <Pressable
               style={[styles.submitButton, {
-                backgroundColor: canSubmit ? theme.accent : theme.backgroundElement,
                 opacity: loading ? 0.6 : 1,
+                borderBottomColor: canSubmit ? theme.accent : theme.border,
               }]}
               onPress={handleSubmit}
               disabled={!canSubmit || loading}>
               <Text style={[styles.submitText, {
-                color: canSubmit ? theme.accentText : theme.textTertiary,
+                color: canSubmit ? theme.accent : theme.textTertiary,
               }]}>
-                {loading ? 'Posting...' : 'Share recommendation'}
+                {loading ? 'Posting...' : 'Share recommendation →'}
               </Text>
             </Pressable>
           </ScrollView>
@@ -387,8 +387,8 @@ const styles = StyleSheet.create({
   charCount: { fontSize: FontSize.xs, textAlign: 'right' },
   submitButton: {
     paddingVertical: Spacing.lg,
-    borderRadius: BorderRadius.md,
-    alignItems: 'center',
+    borderBottomWidth: 1,
+    alignItems: 'flex-start',
     marginTop: Spacing.md,
   },
   submitText: {

@@ -56,10 +56,10 @@ export function RecommendationCard({
 
   return (
     <Pressable
-      style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}
+      style={[styles.card, { borderBottomColor: theme.border }]}
       onPress={onPressPlace}
       disabled={!onPressPlace}>
-      {/* Top row: avatar + recommends + distance */}
+      {/* Who + when */}
       <View style={styles.topRow}>
         <Pressable style={styles.recommender} onPress={onPressUser} disabled={!onPressUser}>
           <View style={[styles.avatar, { backgroundColor: theme.backgroundElement }]}>
@@ -71,22 +71,18 @@ export function RecommendationCard({
               </Text>
             )}
           </View>
-          <Text style={[styles.recommendsText, { color: theme.textSecondary }]}>
-            <Text style={{ color: theme.text, fontWeight: '500' }}>{displayName}</Text>
-            {' recommends'}
-          </Text>
-        </Pressable>
-        {distance ? (
-          <View style={[styles.distancePill, { backgroundColor: theme.backgroundElement }]}>
-            <Text style={[styles.distanceText, { color: theme.textTertiary }]}>{distance}</Text>
+          <View>
+            <Text style={[styles.nameText, { color: theme.text }]}>{displayName}</Text>
+            <Text style={[styles.metaText, { color: theme.textTertiary }]}>
+              {createdAt ? timeAgo(createdAt) : ''}
+              {distance ? ` · ${distance}` : ''}
+            </Text>
           </View>
-        ) : null}
+        </Pressable>
       </View>
 
-      {/* Category label */}
-      <Text style={[styles.category, { color: theme.rust }]}>{category.toUpperCase()}</Text>
-
-      {/* Place name — the visual anchor */}
+      {/* Category + Place */}
+      <Text style={[styles.category, { color: theme.textTertiary }]}>{category.toUpperCase()}</Text>
       <Text style={[styles.placeName, { color: theme.text }]}>{placeName}</Text>
 
       {/* Rating */}
@@ -95,10 +91,9 @@ export function RecommendationCard({
       {/* Post photos */}
       {photos.length > 0 ? (
         <View style={styles.photoContainer}>
-          <Image source={{ uri: photos[activePhotoIndex] }} style={styles.photo} contentFit="contain" />
+          <Image source={{ uri: photos[activePhotoIndex] }} style={styles.photo} contentFit="cover" />
           {photos.length > 1 && (
             <>
-              {/* Arrow buttons */}
               {activePhotoIndex > 0 && (
                 <Pressable
                   style={[styles.arrowBtn, styles.arrowLeft]}
@@ -113,63 +108,42 @@ export function RecommendationCard({
                   <Text style={styles.arrowText}>›</Text>
                 </Pressable>
               )}
-              {/* Dots indicator */}
               <View style={styles.dotsRow}>
                 {photos.map((_, i) => (
                   <View key={i} style={[styles.dot, i === activePhotoIndex && styles.dotActive]} />
                 ))}
-              </View>
-              {/* Counter */}
-              <View style={styles.counterPill}>
-                <Text style={styles.counterText}>{activePhotoIndex + 1}/{photos.length}</Text>
               </View>
             </>
           )}
         </View>
       ) : null}
 
-      {/* The human note — italic serif, the emotional core */}
+      {/* The human note */}
       <Text style={[styles.note, { color: theme.text }]}>"{note}"</Text>
 
-      {/* Agree / Disagree */}
-      {postId && onReact ? (
-        <View style={styles.reactionRow}>
-          <Pressable
-            onPress={(e) => { e.stopPropagation?.(); onReact(postId, 'agree'); import('@/lib/haptics').then(h => h.hapticMedium()); }}
-            style={[
-              styles.reactionBtn,
-              userReaction === 'agree' && { backgroundColor: '#D4EDDA' },
-            ]}>
-            <Text style={styles.reactionEmoji}>👍</Text>
-            {agreeCount > 0 && (
-              <Text style={[styles.reactionCount, { color: theme.textSecondary }]}>{agreeCount}</Text>
-            )}
-          </Pressable>
-          <Pressable
-            onPress={(e) => { e.stopPropagation?.(); onReact(postId, 'disagree'); import('@/lib/haptics').then(h => h.hapticMedium()); }}
-            style={[
-              styles.reactionBtn,
-              userReaction === 'disagree' && { backgroundColor: '#F8D7DA' },
-            ]}>
-            <Text style={styles.reactionEmoji}>👎</Text>
-            {disagreeCount > 0 && (
-              <Text style={[styles.reactionCount, { color: theme.textSecondary }]}>{disagreeCount}</Text>
-            )}
-          </Pressable>
-        </View>
-      ) : null}
-
-      {/* Address + timestamp */}
+      {/* Footer: address + reactions */}
       <View style={styles.bottomRow}>
         {placeAddress ? (
           <Text style={[styles.location, { color: theme.textTertiary }]} numberOfLines={1}>
             {placeAddress}
           </Text>
         ) : null}
-        {createdAt ? (
-          <Text style={[styles.timestamp, { color: theme.textTertiary }]}>
-            {timeAgo(createdAt)}
-          </Text>
+        {postId && onReact ? (
+          <View style={styles.reactionRow}>
+            <Pressable
+              onPress={(e) => { e.stopPropagation?.(); onReact(postId, 'agree'); import('@/lib/haptics').then(h => h.hapticMedium()); }}>
+              <Text style={[styles.reactionText, { color: userReaction === 'agree' ? theme.accent : theme.textTertiary }]}>
+                agree{agreeCount > 0 ? ` ${agreeCount}` : ''}
+              </Text>
+            </Pressable>
+            <Text style={[styles.reactionDivider, { color: theme.border }]}>·</Text>
+            <Pressable
+              onPress={(e) => { e.stopPropagation?.(); onReact(postId, 'disagree'); import('@/lib/haptics').then(h => h.hapticMedium()); }}>
+              <Text style={[styles.reactionText, { color: userReaction === 'disagree' ? theme.rust : theme.textTertiary }]}>
+                disagree{disagreeCount > 0 ? ` ${disagreeCount}` : ''}
+              </Text>
+            </Pressable>
+          </View>
         ) : null}
       </View>
     </Pressable>
@@ -194,166 +168,131 @@ function timeAgo(dateStr: string): string {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    padding: Spacing.xl,
-    gap: Spacing.lg,
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.xs,
+    gap: Spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   topRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
   },
   recommender: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    flex: 1,
   },
   avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: BorderRadius.full,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
   },
   avatarImage: {
-    width: 32,
-    height: 32,
+    width: 28,
+    height: 28,
   },
   avatarFallback: {
-    fontSize: FontSize.sm,
+    fontSize: 11,
     fontWeight: '600',
   },
-  recommendsText: {
+  nameText: {
+    fontFamily: 'Lora_500Medium',
     fontSize: FontSize.sm,
-    lineHeight: 20,
   },
-  distancePill: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.full,
-  },
-  distanceText: {
-    fontSize: FontSize.xs,
+  metaText: {
+    fontSize: 11,
   },
   category: {
-    fontSize: 11,
-    letterSpacing: 1.5,
+    fontSize: 10,
+    letterSpacing: 1.8,
     fontWeight: '500',
+    marginTop: Spacing.sm,
   },
   placeName: {
-    fontFamily: 'Lora_500Medium',
+    fontFamily: 'Lora_600SemiBold',
     fontSize: FontSize.xl,
-    lineHeight: 30,
+    lineHeight: 28,
+    marginTop: -2,
   },
   note: {
     fontFamily: 'Lora_400Regular_Italic',
     fontStyle: 'italic',
-    fontSize: FontSize.base,
-    lineHeight: 24,
+    fontSize: 15,
+    lineHeight: 23,
   },
   photoContainer: {
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius.sm,
     overflow: 'hidden',
     position: 'relative' as const,
-    backgroundColor: 'rgba(0,0,0,0.03)',
   },
   photo: {
     width: '100%',
-    aspectRatio: 5 / 4,
-    borderRadius: BorderRadius.md,
+    aspectRatio: 4 / 3,
   },
   arrowBtn: {
     position: 'absolute' as const,
     top: '50%',
-    marginTop: -16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    marginTop: -14,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.3)',
     justifyContent: 'center' as const,
     alignItems: 'center' as const,
   },
-  arrowLeft: {
-    left: 8,
-  },
-  arrowRight: {
-    right: 8,
-  },
+  arrowLeft: { left: 6 },
+  arrowRight: { right: 6 },
   arrowText: {
     color: '#fff',
-    fontSize: 20,
-    fontWeight: '700' as const,
-    lineHeight: 22,
+    fontSize: 18,
+    fontWeight: '600' as const,
+    lineHeight: 20,
     marginTop: -1,
   },
   dotsRow: {
     position: 'absolute' as const,
-    bottom: 8,
+    bottom: 6,
     left: 0,
     right: 0,
     flexDirection: 'row' as const,
     justifyContent: 'center' as const,
-    gap: 5,
+    gap: 4,
   },
   dot: {
-    width: 6,
-    height: 6,
+    width: 5,
+    height: 5,
     borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: 'rgba(255,255,255,0.45)',
   },
   dotActive: {
     backgroundColor: '#fff',
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  counterPill: {
-    position: 'absolute' as const,
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  counterText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '600' as const,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   bottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: Spacing.xs,
   },
   location: {
-    fontSize: FontSize.xs,
+    fontSize: 11,
     flex: 1,
-  },
-  timestamp: {
-    fontSize: FontSize.xs,
-    marginLeft: Spacing.md,
   },
   reactionRow: {
     flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  reactionBtn: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.full,
+    gap: Spacing.sm,
   },
-  reactionEmoji: {
-    fontSize: 16,
+  reactionText: {
+    fontFamily: 'Lora_400Regular',
+    fontSize: 12,
   },
-  reactionCount: {
-    fontSize: FontSize.xs,
-    fontWeight: '600',
+  reactionDivider: {
+    fontSize: 10,
   },
 });

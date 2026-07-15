@@ -5,6 +5,7 @@ import {
     FlatList,
     Pressable,
     StyleSheet,
+    Text,
     TextInput,
     View,
 } from 'react-native';
@@ -13,12 +14,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import {
-    BorderRadius,
     BottomTabInset,
     ContentContainerWeb,
     FontSize,
     Spacing,
-    WebNavHeight,
+    WebNavHeight
 } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
@@ -113,47 +113,39 @@ export default function SearchScreen() {
       const btnLabel = isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow';
       const btnActive = isFollowing || isRequested;
       return (
-        <View style={[styles.userCard, { backgroundColor: theme.backgroundElement }]}>
-          <View style={styles.avatar}>
+        <View style={[styles.userCard, { borderBottomColor: theme.border }]}>
+          <View style={[styles.avatar, { backgroundColor: theme.backgroundElement }]}>
             {item.photo_url ? (
               <Image source={{ uri: item.photo_url }} style={styles.avatarImage} />
             ) : (
-              <ThemedText style={styles.avatarText}>
+              <Text style={[styles.avatarText, { color: theme.textTertiary }]}>
                 {(item.display_name || '?')[0].toUpperCase()}
-              </ThemedText>
+              </Text>
             )}
           </View>
           <View style={styles.userInfo}>
-            <ThemedText type="defaultSemiBold">
+            <Text style={[styles.userName, { color: theme.text }]}>
               {item.display_name}
               {item.is_private ? ' 🔒' : ''}
-            </ThemedText>
+            </Text>
             {item.bio ? (
-              <ThemedText themeColor="textSecondary" type="small" numberOfLines={1}>
+              <Text style={[styles.userBio, { color: theme.textSecondary }]} numberOfLines={1}>
                 {item.bio}
-              </ThemedText>
+              </Text>
             ) : null}
-            <ThemedText themeColor="textSecondary" type="small">
-              {item.posts_count} {item.posts_count === 1 ? 'post' : 'posts'}
-            </ThemedText>
+            <Text style={[styles.userMeta, { color: theme.textTertiary }]}>
+              {item.posts_count} {item.posts_count === 1 ? 'recommendation' : 'recommendations'}
+            </Text>
           </View>
           <Pressable
             onPress={() => toggleFollow(item.id)}
-            disabled={togglingId === item.id}
-            style={[
-              styles.followButton,
-              btnActive
-                ? { backgroundColor: theme.backgroundElement, borderColor: theme.border, borderWidth: 1 }
-                : { backgroundColor: theme.accent },
-            ]}>
+            disabled={togglingId === item.id}>
             {togglingId === item.id ? (
-              <ActivityIndicator size="small" color={btnActive ? theme.text : '#fff'} />
+              <ActivityIndicator size="small" color={theme.accent} />
             ) : (
-              <ThemedText
-                type="small"
-                style={{ color: btnActive ? theme.text : '#fff', fontWeight: '600' }}>
+              <Text style={[styles.followText, { color: btnActive ? theme.textTertiary : theme.accent }]}>
                 {btnLabel}
-              </ThemedText>
+              </Text>
             )}
           </Pressable>
         </View>
@@ -173,13 +165,12 @@ export default function SearchScreen() {
             style={[
               styles.searchInput,
               {
-                backgroundColor: theme.backgroundElement,
                 color: theme.text,
-                borderColor: theme.border,
+                borderBottomColor: theme.border,
               },
             ]}
             placeholder="Search by name..."
-            placeholderTextColor={theme.textSecondary}
+            placeholderTextColor={theme.textTertiary}
             value={query}
             onChangeText={setQuery}
             autoCapitalize="none"
@@ -222,53 +213,62 @@ const styles = StyleSheet.create({
     paddingTop: WebNavHeight + Spacing.xl,
     paddingBottom: BottomTabInset,
   },
-  title: { marginBottom: Spacing.md },
+  title: { marginBottom: Spacing.lg },
   searchInput: {
-    height: 48,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    paddingHorizontal: Spacing.lg,
+    height: 44,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: Spacing.xs,
     fontSize: FontSize.base,
-    marginBottom: Spacing.lg,
+    fontFamily: 'Lora_400Regular',
+    marginBottom: Spacing.md,
   },
   loader: { marginTop: Spacing['2xl'] },
   listContent: {
-    gap: Spacing.md,
     paddingBottom: Spacing['2xl'],
   },
   userCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing.lg,
     gap: Spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#B6C5A4',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
   avatarImage: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 36,
+    height: 36,
   },
   avatarText: {
-    fontWeight: '700',
-    fontSize: FontSize.lg,
-    color: '#fff',
+    fontWeight: '600',
+    fontSize: FontSize.sm,
+  },
+  userName: {
+    fontFamily: 'Lora_500Medium',
+    fontSize: FontSize.sm,
+  },
+  userBio: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  userMeta: {
+    fontSize: 11,
   },
   userInfo: { flex: 1, gap: 2 },
-  followButton: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm + 4,
-    borderRadius: BorderRadius.lg,
-    minWidth: 90,
-    alignItems: 'center',
-    justifyContent: 'center',
+  followText: {
+    fontFamily: 'Lora_500Medium',
+    fontSize: 12,
   },
-  emptyText: { textAlign: 'center', marginTop: Spacing['2xl'] },
+  emptyText: {
+    textAlign: 'center',
+    marginTop: Spacing['2xl'],
+    fontFamily: 'Lora_400Regular_Italic',
+    fontStyle: 'italic',
+  },
 });

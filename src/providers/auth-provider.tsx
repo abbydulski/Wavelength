@@ -13,7 +13,14 @@ type AuthContextType = {
   resetPassword: (email: string) => Promise<{ error: string | null }>;
 };
 
+type OnboardingContextType = {
+  hasOnboarded: boolean | null;
+  checkOnboarding: (userId: string) => Promise<void>;
+  completeOnboarding: (userId: string) => Promise<void>;
+};
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const OnboardingContext = createContext<OnboardingContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -61,6 +68,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null };
   };
 
+  // Onboarding state
+  const [hasOnboarded, setHasOnboarded] = useState<boolean | null>(null);
+
+  const checkOnboarding = async (userId: string) => {
+    const { data } = await supabase
+      .from('users')
+      .select('has_onboarded')
+      .eq('id', userId)
+      .single();
+    setHasOnboarded(data?.has_onboarded ?? false);
+  };
+
+  const completeOnboarding = async (userId: string) => {
+    await supabase
+      .from('users')
+      .update({ has_onboarded: true })
+      .eq('id', userId);
+    setHasOnboarded(true);
+  };
+
+  // Reset onboarding state on logout
+  useEffect(() => {
+    if (!session) setHasOnboarded(null);
+  }, [session]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -72,7 +104,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signOut,
         resetPassword,
       }}>
-      {children}
+      <OnboardingContext.Provider
+        value={{ hasOnboarded, checkOnboarding, completeOnboarding }}>
+        {children}
+      </OnboardingContext.Provider>
     </AuthContext.Provider>
   );
 }
@@ -81,6 +116,14 @@ export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}
+
+export function useOnboarding() {
+  const context = useContext(OnboardingContext);
+  if (!context) {
+    throw new Error('useOnboarding must be used within an AuthProvider');
   }
   return context;
 }

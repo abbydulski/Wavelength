@@ -12,15 +12,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RecommendationCard } from '@/components/recommendation-card';
 import { SkeletonList } from '@/components/skeleton';
-import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import {
-  BorderRadius,
   BottomTabInset,
   ContentContainerWeb,
   FontSize,
   Spacing,
-  WebNavHeight,
+  WebNavHeight
 } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
@@ -230,18 +228,15 @@ export default function FeedScreen() {
               }
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyEmoji}>👋</Text>
-                  <ThemedText type="defaultSemiBold" style={styles.emptyTitle}>
-                    Welcome to Wavelength
-                  </ThemedText>
-                  <ThemedText themeColor="textSecondary" style={styles.emptyText}>
-                    Your feed shows recommendations from people you trust. Start by following friends — tap the Search tab to find them.
-                  </ThemedText>
-                  <Pressable
-                    style={[styles.onboardingBtn, { backgroundColor: theme.accent }]}
-                    onPress={() => router.push('/(tabs)/search')}>
-                    <Text style={[styles.onboardingBtnText, { color: theme.accentText }]}>
-                      Find people to follow
+                  <Text style={[styles.emptyTitle, { color: theme.text }]}>
+                    Your feed is quiet
+                  </Text>
+                  <Text style={[styles.emptyBody, { color: theme.textSecondary }]}>
+                    Recommendations from people you follow{'\n'}will show up here.
+                  </Text>
+                  <Pressable onPress={() => router.push('/(tabs)/search')}>
+                    <Text style={[styles.emptyCta, { color: theme.accent }]}>
+                      Find people to follow →
                     </Text>
                   </Pressable>
                 </View>
@@ -268,27 +263,30 @@ const styles = StyleSheet.create({
   },
   loader: { marginTop: Spacing['3xl'] },
   listContent: {
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
     paddingBottom: BottomTabInset + Spacing['2xl'],
-    gap: Spacing.lg,
   },
   emptyContainer: {
     paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing['3xl'],
+    paddingTop: Spacing['3xl'] + Spacing['3xl'],
     alignItems: 'center',
-    gap: Spacing.md,
+    gap: Spacing.lg,
   },
-  emptyEmoji: { fontSize: 48 },
-  emptyTitle: { textAlign: 'center', fontSize: FontSize.xl },
-  emptyText: { textAlign: 'center', lineHeight: 22 },
-  onboardingBtn: {
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.lg,
-    borderRadius: BorderRadius.lg,
-    marginTop: Spacing.md,
-  },
-  onboardingBtnText: {
+  emptyTitle: {
     fontFamily: 'Lora_600SemiBold',
-    fontSize: FontSize.base,
+    fontSize: FontSize.xl,
+    textAlign: 'center',
+  },
+  emptyBody: {
+    fontFamily: 'Lora_400Regular_Italic',
+    fontStyle: 'italic',
+    fontSize: 15,
+    lineHeight: 23,
+    textAlign: 'center',
+  },
+  emptyCta: {
+    fontFamily: 'Lora_500Medium',
+    fontSize: FontSize.sm,
+    marginTop: Spacing.md,
   },
 });

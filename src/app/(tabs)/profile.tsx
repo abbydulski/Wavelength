@@ -190,19 +190,22 @@ export default function ProfileScreen() {
   );
 
   const renderPost = ({ item }: { item: UserPost }) => (
-    <View style={[styles.postCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-      <Pressable
-        style={styles.deleteBtn}
-        onPress={() => deletePost(item.id)}
-        hitSlop={8}>
-        <Text style={[styles.deleteBtnText, { color: theme.textTertiary }]}>×</Text>
-      </Pressable>
-      <Text style={[styles.postCategory, { color: theme.rust }]}>
-        {item.category?.toUpperCase() || 'PLACE'}
-      </Text>
-      <Text style={[styles.postPlaceName, { color: theme.text }]}>
-        {item.places?.name ?? 'Unknown place'}
-      </Text>
+    <View style={[styles.postCard, { borderBottomColor: theme.border }]}>
+      <View style={styles.postTop}>
+        <View style={{ flex: 1, gap: Spacing.xs }}>
+          <Text style={[styles.postCategory, { color: theme.textTertiary }]}>
+            {item.category?.toUpperCase() || 'PLACE'}
+          </Text>
+          <Text style={[styles.postPlaceName, { color: theme.text }]}>
+            {item.places?.name ?? 'Unknown place'}
+          </Text>
+        </View>
+        <Pressable
+          onPress={() => deletePost(item.id)}
+          hitSlop={8}>
+          <Text style={[styles.deleteBtnText, { color: theme.textTertiary }]}>×</Text>
+        </Pressable>
+      </View>
       <WavelengthRating rating={item.rating} size="sm" />
       <Text style={[styles.postCaption, { color: theme.text }]} numberOfLines={2}>
         "{item.caption}"
@@ -298,11 +301,11 @@ export default function ProfileScreen() {
           </View>
           {!editing && (
             <View style={styles.settingsRow}>
-              <View style={[styles.privacyRow, { borderColor: theme.border }]}>
+              <View style={[styles.privacyRow, { borderBottomColor: theme.border }]}>
                 <View style={styles.privacyInfo}>
                   <Text style={[styles.privacyLabel, { color: theme.text }]}>Private account</Text>
                   <Text style={[styles.privacyHint, { color: theme.textTertiary }]}>
-                    Your ratings count, but your posts are hidden from non-followers
+                    Posts hidden from non-followers
                   </Text>
                 </View>
                 <Switch
@@ -314,10 +317,8 @@ export default function ProfileScreen() {
                   trackColor={{ false: theme.backgroundElement, true: theme.accent }}
                 />
               </View>
-              <Pressable
-                style={[styles.signOutButton, { borderColor: theme.border }]}
-                onPress={signOut}>
-                <Text style={[styles.signOutText, { color: theme.destructive }]}>Sign out</Text>
+              <Pressable onPress={signOut}>
+                <Text style={[styles.signOutText, { color: theme.textTertiary }]}>Sign out</Text>
               </Pressable>
             </View>
           )}
@@ -330,18 +331,15 @@ export default function ProfileScreen() {
               Follow requests ({followRequests.length})
             </Text>
             {followRequests.map((req) => (
-              <View key={req.id} style={[styles.requestCard, { backgroundColor: theme.backgroundElement }]}>
+              <View key={req.id} style={[styles.requestCard, { borderBottomColor: theme.border }]}>
                 <Text style={[styles.requestName, { color: theme.text }]}>{req.display_name}</Text>
                 <View style={styles.requestActions}>
-                  <Pressable
-                    onPress={() => approveRequest(req.id, req.from_user_id)}
-                    style={[styles.requestBtn, { backgroundColor: theme.accent }]}>
-                    <Text style={styles.requestBtnText}>Accept</Text>
+                  <Pressable onPress={() => approveRequest(req.id, req.from_user_id)}>
+                    <Text style={[styles.requestAcceptText, { color: theme.accent }]}>Accept</Text>
                   </Pressable>
-                  <Pressable
-                    onPress={() => denyRequest(req.id)}
-                    style={[styles.requestBtn, { borderColor: theme.border, borderWidth: 1 }]}>
-                    <Text style={[styles.requestDenyText, { color: theme.textSecondary }]}>Deny</Text>
+                  <Text style={{ color: theme.border }}>·</Text>
+                  <Pressable onPress={() => denyRequest(req.id)}>
+                    <Text style={[styles.requestDenyText, { color: theme.textTertiary }]}>Deny</Text>
                   </Pressable>
                 </View>
               </View>
@@ -423,26 +421,20 @@ const styles = StyleSheet.create({
   title: { fontFamily: 'Lora_600SemiBold', fontSize: FontSize['2xl'] },
   email: { fontSize: FontSize.sm },
   settingsRow: {
-    gap: Spacing.lg,
+    gap: Spacing.md,
+    marginTop: Spacing.sm,
   },
   privacyRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.lg,
-    borderWidth: 1,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.lg,
+    paddingBottom: Spacing.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   privacyInfo: { flex: 1, gap: 2 },
-  privacyLabel: { fontSize: FontSize.sm, fontWeight: '600' },
-  privacyHint: { fontSize: FontSize.xs, lineHeight: 16 },
-  signOutButton: {
-    borderWidth: 1,
-    borderRadius: BorderRadius.md,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-  },
-  signOutText: { fontSize: FontSize.sm, fontFamily: 'Lora_600SemiBold' },
+  privacyLabel: { fontFamily: 'Lora_500Medium', fontSize: FontSize.sm },
+  privacyHint: { fontSize: 11, lineHeight: 16 },
+  signOutText: { fontSize: FontSize.sm, fontFamily: 'Lora_400Regular', marginTop: Spacing.sm },
   postsCount: { fontSize: FontSize.sm },
   bioText: { fontSize: FontSize.sm },
   editProfileText: { fontSize: FontSize.sm, fontWeight: '600' },
@@ -465,25 +457,20 @@ const styles = StyleSheet.create({
   requestsSection: {
     paddingHorizontal: Spacing.xl,
     paddingBottom: Spacing.lg,
-    gap: Spacing.md,
+    gap: Spacing.xs,
   },
-  requestsTitle: { fontFamily: 'Lora_600SemiBold', fontSize: FontSize.base },
+  requestsTitle: { fontFamily: 'Lora_600SemiBold', fontSize: FontSize.sm },
   requestCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     gap: Spacing.md,
   },
-  requestName: { flex: 1, fontWeight: '600', fontSize: FontSize.sm },
-  requestActions: { flexDirection: 'row', gap: Spacing.md },
-  requestBtn: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm + 2,
-    borderRadius: BorderRadius.md,
-  },
-  requestBtnText: { color: '#fff', fontSize: FontSize.xs, fontWeight: '600' },
-  requestDenyText: { fontSize: FontSize.xs, fontWeight: '600' },
+  requestName: { flex: 1, fontFamily: 'Lora_500Medium', fontSize: FontSize.sm },
+  requestActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  requestAcceptText: { fontFamily: 'Lora_500Medium', fontSize: 12 },
+  requestDenyText: { fontSize: 12 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: Spacing.md },
   emptyTitle: { fontFamily: 'Lora_500Medium', fontSize: FontSize.lg },
   emptySubtitle: { fontSize: FontSize.base, textAlign: 'center' },
@@ -494,14 +481,17 @@ const styles = StyleSheet.create({
     ...ContentContainerWeb,
   },
   postCard: {
-    position: 'relative' as const,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    padding: Spacing.xl,
-    gap: Spacing.md,
+    paddingVertical: Spacing.lg,
+    gap: Spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  postCategory: { fontSize: 11, letterSpacing: 1.5, fontWeight: '500' },
-  postPlaceName: { fontFamily: 'Lora_500Medium', fontSize: FontSize.lg },
+  postTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  postCategory: { fontSize: 10, letterSpacing: 1.8, fontWeight: '500' },
+  postPlaceName: { fontFamily: 'Lora_600SemiBold', fontSize: FontSize.base },
   postCaption: {
     fontFamily: 'Lora_400Regular_Italic',
     fontStyle: 'italic',
@@ -509,19 +499,8 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   postDate: { fontSize: FontSize.xs },
-  deleteBtn: {
-    position: 'absolute' as const,
-    top: Spacing.md,
-    right: Spacing.md,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-  },
   deleteBtnText: {
-    fontSize: 20,
-    lineHeight: 22,
-    fontWeight: '400' as const,
+    fontSize: 18,
+    lineHeight: 20,
   },
 });

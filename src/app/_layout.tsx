@@ -7,21 +7,20 @@ import {
 } from '@expo-google-fonts/lora';
 import { DarkTheme, DefaultTheme, Redirect, Stack, ThemeProvider, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { ActivityIndicator, useColorScheme, View } from 'react-native';
 
 import { Colors } from '@/constants/theme';
-import { supabase } from '@/lib/supabase';
-import { AuthProvider, useAuth } from '@/providers/auth-provider';
+import { AuthProvider, useAuth, useOnboarding } from '@/providers/auth-provider';
 
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
   const { session, loading } = useAuth();
+  const { hasOnboarded, checkOnboarding } = useOnboarding();
   const segments = useSegments();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme === 'dark' ? 'dark' : 'light'];
-  const [hasOnboarded, setHasOnboarded] = useState<boolean | null>(null);
 
   const [fontsLoaded] = useFonts({
     Lora_400Regular,
@@ -30,20 +29,11 @@ function RootLayoutNav() {
     Lora_600SemiBold,
   });
 
-  // Check onboarding status when user is logged in
+  // Check onboarding status when user logs in
   useEffect(() => {
-    if (!session?.user) {
-      setHasOnboarded(null);
-      return;
+    if (session?.user) {
+      checkOnboarding(session.user.id);
     }
-    supabase
-      .from('users')
-      .select('has_onboarded')
-      .eq('id', session.user.id)
-      .single()
-      .then(({ data }) => {
-        setHasOnboarded(data?.has_onboarded ?? false);
-      });
   }, [session?.user?.id]);
 
   useEffect(() => {
@@ -62,23 +52,22 @@ function RootLayoutNav() {
 
   const inAuthGroup = segments[0] === '(auth)';
 
-  // Use <Redirect> instead of router.replace() to avoid GO_BACK errors on web
+  // Not logged in → go to login
   if (!session && !inAuthGroup) {
     return <Redirect href="/(auth)/login" />;
   }
-  if (session && inAuthGroup) {
-    // If logged in but not onboarded, send to onboarding
+
+  // Logged in but hasn't onboarded → go to onboarding
+  if (session && hasOnboarded === false) {
     const onOnboarding = segments[1] === 'onboarding';
-    if (hasOnboarded === false && !onOnboarding) {
+    if (!onOnboarding) {
       return <Redirect href="/(auth)/onboarding" />;
     }
-    if (hasOnboarded !== false) {
-      return <Redirect href="/(tabs)" />;
-    }
   }
-  // If logged in, not in auth group, but hasn't onboarded yet
-  if (session && !inAuthGroup && hasOnboarded === false) {
-    return <Redirect href="/(auth)/onboarding" />;
+
+  // Logged in + onboarded but still in auth group → go to tabs
+  if (session && hasOnboarded === true && inAuthGroup) {
+    return <Redirect href="/(tabs)" />;
   }
 
   return (
