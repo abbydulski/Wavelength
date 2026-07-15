@@ -23,10 +23,9 @@ type RecommendationCardProps = {
   onPressUser?: () => void;
   createdAt?: string;
   postId?: string;
-  agreeCount?: number;
-  disagreeCount?: number;
-  userReaction?: 'agree' | 'disagree' | null;
-  onReact?: (postId: string, reaction: 'agree' | 'disagree') => void;
+  loveCount?: number;
+  loved?: boolean;
+  onLove?: (postId: string) => void;
 };
 
 export function RecommendationCard({
@@ -45,10 +44,9 @@ export function RecommendationCard({
   onPressUser,
   createdAt,
   postId,
-  agreeCount = 0,
-  disagreeCount = 0,
-  userReaction,
-  onReact,
+  loveCount = 0,
+  loved,
+  onLove,
 }: RecommendationCardProps) {
   const theme = useTheme();
   const photos = photoUrls?.length ? photoUrls : photoUrl ? [photoUrl] : [];
@@ -128,22 +126,13 @@ export function RecommendationCard({
             {placeAddress}
           </Text>
         ) : null}
-        {postId && onReact ? (
-          <View style={styles.reactionRow}>
-            <Pressable
-              onPress={(e) => { e.stopPropagation?.(); onReact(postId, 'agree'); import('@/lib/haptics').then(h => h.hapticMedium()); }}>
-              <Text style={[styles.reactionText, { color: userReaction === 'agree' ? theme.accent : theme.textTertiary }]}>
-                agree{agreeCount > 0 ? ` ${agreeCount}` : ''}
-              </Text>
-            </Pressable>
-            <Text style={[styles.reactionDivider, { color: theme.border }]}>·</Text>
-            <Pressable
-              onPress={(e) => { e.stopPropagation?.(); onReact(postId, 'disagree'); import('@/lib/haptics').then(h => h.hapticMedium()); }}>
-              <Text style={[styles.reactionText, { color: userReaction === 'disagree' ? theme.rust : theme.textTertiary }]}>
-                disagree{disagreeCount > 0 ? ` ${disagreeCount}` : ''}
-              </Text>
-            </Pressable>
-          </View>
+        {postId && onLove ? (
+          <Pressable
+            onPress={(e) => { e.stopPropagation?.(); onLove(postId); import('@/lib/haptics').then(h => h.hapticMedium()); }}>
+            <Text style={[styles.reactionText, { color: loved ? theme.accent : theme.textTertiary }]}>
+              love{loveCount > 0 ? ` ${loveCount}` : ''}
+            </Text>
+          </Pressable>
         ) : null}
       </View>
     </Pressable>
@@ -283,16 +272,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     flex: 1,
   },
-  reactionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
   reactionText: {
     fontFamily: 'Lora_400Regular',
     fontSize: 12,
-  },
-  reactionDivider: {
-    fontSize: 10,
   },
 });

@@ -40,7 +40,7 @@ type FeedPost = {
   photo_urls: string[];
 };
 
-type ReactionMap = Record<string, { agree: number; disagree: number; mine: 'agree' | 'disagree' | null }>;
+type LoveMap = Record<string, { count: number; loved: boolean }>;
 
 export default function FeedScreen() {
   const theme = useTheme();
@@ -49,7 +49,7 @@ export default function FeedScreen() {
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [reactions, setReactions] = useState<ReactionMap>({});
+  const [loves, setLoves] = useState<LoveMap>({});
 
   const fetchFeed = useCallback(async () => {
     if (!user) return;
@@ -112,62 +112,51 @@ export default function FeedScreen() {
       });
       setPosts(mapped);
 
-      // Fetch reactions for these posts
+      // Fetch loves for these posts
       const postIds = mapped.map((p) => p.id);
       if (postIds.length > 0) {
         const { data: rxData } = await supabase
           .from('post_reactions')
-          .select('post_id, reaction, user_id')
-          .in('post_id', postIds);
+          .select('post_id, user_id')
+          .in('post_id', postIds)
+          .eq('reaction', 'agree');
 
-        const rxMap: ReactionMap = {};
-        for (const pid of postIds) rxMap[pid] = { agree: 0, disagree: 0, mine: null };
+        const loveMap: LoveMap = {};
+        for (const pid of postIds) loveMap[pid] = { count: 0, loved: false };
         for (const r of rxData ?? []) {
-          if (!rxMap[r.post_id]) rxMap[r.post_id] = { agree: 0, disagree: 0, mine: null };
-          if (r.reaction === 'agree') rxMap[r.post_id].agree++;
-          else rxMap[r.post_id].disagree++;
-          if (r.user_id === user.id) rxMap[r.post_id].mine = r.reaction as 'agree' | 'disagree';
+          if (!loveMap[r.post_id]) loveMap[r.post_id] = { count: 0, loved: false };
+          loveMap[r.post_id].count++;
+          if (r.user_id === user.id) loveMap[r.post_id].loved = true;
         }
-        setReactions(rxMap);
+        setLoves(loveMap);
       }
     } catch (err) {
       console.error('Feed fetch error:', err);
     }
   }, [user]);
 
-  const handleReact = useCallback(async (postId: string, reaction: 'agree' | 'disagree') => {
+  const handleLove = useCallback(async (postId: string) => {
     if (!user) return;
-    const current = reactions[postId]?.mine;
-    if (current === reaction) {
-      // Remove reaction
+    const current = loves[postId]?.loved;
+    if (current) {
+      // Remove love
       await supabase.from('post_reactions').delete().eq('post_id', postId).eq('user_id', user.id);
-      setReactions((prev) => ({
+      setLoves((prev) => ({
         ...prev,
-        [postId]: {
-          ...prev[postId],
-          [reaction]: Math.max(0, (prev[postId]?.[reaction] ?? 1) - 1),
-          mine: null,
-        },
+        [postId]: { count: Math.max(0, (prev[postId]?.count ?? 1) - 1), loved: false },
       }));
     } else {
-      // Upsert reaction
+      // Add love
       await supabase.from('post_reactions').upsert(
-        { post_id: postId, user_id: user.id, reaction },
+        { post_id: postId, user_id: user.id, reaction: 'agree' },
         { onConflict: 'post_id,user_id' }
       );
-      setReactions((prev) => {
-        const old = prev[postId] ?? { agree: 0, disagree: 0, mine: null };
-        return {
-          ...prev,
-          [postId]: {
-            agree: old.agree + (reaction === 'agree' ? 1 : 0) - (current === 'agree' ? 1 : 0),
-            disagree: old.disagree + (reaction === 'disagree' ? 1 : 0) - (current === 'disagree' ? 1 : 0),
-            mine: reaction,
-          },
-        };
-      });
+      setLoves((prev) => ({
+        ...prev,
+        [postId]: { count: (prev[postId]?.count ?? 0) + 1, loved: true },
+      }));
     }
-  }, [user, reactions]);
+  }, [user, loves]);
 
   useFocusEffect(
     useCallback(() => {
@@ -195,16 +184,14 @@ export default function FeedScreen() {
         photoUrls={item.photo_urls}
         createdAt={item.created_at}
         isNetwork
-        onPressPlace={() => router.push('/(tabs)/discover')}
         onPressUser={() => router.push(`/user/${item.user_id}`)}
         postId={item.id}
-        agreeCount={reactions[item.id]?.agree ?? 0}
-        disagreeCount={reactions[item.id]?.disagree ?? 0}
-        userReaction={reactions[item.id]?.mine ?? null}
-        onReact={handleReact}
+        loveCount={loves[item.id]?.count ?? 0}
+        loved={loves[item.id]?.loved ?? false}
+        onLove={handleLove}
       />
     ),
-    [router, reactions, handleReact]
+    [router, loves, handleLove]
   );
 
   return (

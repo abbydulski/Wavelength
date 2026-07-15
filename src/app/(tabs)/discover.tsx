@@ -9,6 +9,7 @@ import {
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     View
 } from 'react-native';
 
@@ -69,6 +70,7 @@ export default function DiscoverScreen() {
   const [places, setPlaces] = useState<DiscoverPlace[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Place detail overlay state
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
@@ -102,9 +104,18 @@ export default function DiscoverScreen() {
   );
 
   const filteredPlaces = useMemo(() => {
-    if (!selectedCategory) return places;
-    return places.filter((p) => p.category === selectedCategory);
-  }, [places, selectedCategory]);
+    let result = places;
+    if (selectedCategory) {
+      result = result.filter((p) => p.category === selectedCategory);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      result = result.filter((p) =>
+        p.name.toLowerCase().includes(q) || p.address?.toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [places, selectedCategory, searchQuery]);
 
   // Fetch place detail when a marker is tapped
   const handlePlaceTap = useCallback(async (placeId: string) => {
@@ -203,6 +214,14 @@ export default function DiscoverScreen() {
       {/* Floating header */}
       <View style={[styles.floatingHeader, { paddingTop: WebNavHeight + Spacing.lg, backgroundColor: theme.background + 'E6' }]}>
         <Text style={[styles.title, { color: theme.text }]}>Discover</Text>
+        <TextInput
+          style={[styles.searchInput, { color: theme.text, borderBottomColor: theme.border }]}
+          placeholder="Search places..."
+          placeholderTextColor={theme.textTertiary}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCorrect={false}
+        />
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -249,15 +268,6 @@ export default function DiscoverScreen() {
           onPressPlace={handlePlaceTap}
         />
       ) : null}
-
-      {/* Place count */}
-      {!loading && filteredPlaces.length > 0 && !selectedPlaceId && (
-        <View style={[styles.countBadge, { backgroundColor: theme.background }]}>
-          <Text style={[styles.countText, { color: theme.textTertiary }]}>
-            {filteredPlaces.length} {filteredPlaces.length === 1 ? 'place' : 'places'}
-          </Text>
-        </View>
-      )}
 
       {/* Place detail overlay */}
       {selectedPlaceId && placeDetail && (
@@ -383,18 +393,12 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     fontSize: FontSize.sm,
   },
-  countBadge: {
-    position: 'absolute',
-    bottom: Spacing['3xl'] + Spacing['3xl'],
-    alignSelf: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.xs,
-    borderRadius: 20,
-    opacity: 0.85,
-  },
-  countText: {
+  searchInput: {
     fontFamily: 'Lora_400Regular',
-    fontSize: 11,
+    fontSize: 13,
+    paddingVertical: Spacing.xs,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    marginBottom: Spacing.sm,
   },
 
   // Place detail overlay
