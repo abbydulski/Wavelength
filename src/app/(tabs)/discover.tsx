@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
@@ -65,6 +65,7 @@ function timeAgo(dateStr: string): string {
 
 export default function DiscoverScreen() {
   const theme = useTheme();
+  const router = useRouter();
   const { user } = useAuth();
   const { location: userLocation, loading: locationLoading } = useLocation();
   const [places, setPlaces] = useState<DiscoverPlace[]>([]);
@@ -255,10 +256,19 @@ export default function DiscoverScreen() {
         </View>
       ) : filteredPlaces.length === 0 ? (
         <View style={styles.centered}>
-          <Text style={[styles.emptyTitle, { color: theme.text }]}>No places yet</Text>
-          <Text style={[styles.emptyBody, { color: theme.textSecondary }]}>
-            {selectedCategory ? 'Nothing in this category nearby.' : 'Be the first to rate a place.'}
+          <Text style={[styles.emptyTitle, { color: theme.text }]}>
+            {selectedCategory ? 'Nothing here yet' : 'Your map is empty'}
           </Text>
+          <Text style={[styles.emptyBody, { color: theme.textSecondary }]}>
+            {selectedCategory
+              ? 'No one in your circle has shared a spot in this category yet.'
+              : 'Share your favorite local spots and\nthey\'ll appear on the map.'}
+          </Text>
+          {!selectedCategory && (
+            <Pressable onPress={() => router.push('/(tabs)/create')}>
+              <Text style={[styles.emptyCta, { color: theme.accent }]}>Share a place →</Text>
+            </Pressable>
+          )}
         </View>
       ) : userLocation ? (
         <DiscoverMap
@@ -392,6 +402,13 @@ const styles = StyleSheet.create({
     fontFamily: 'Lora_400Regular_Italic',
     fontStyle: 'italic',
     fontSize: FontSize.sm,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  emptyCta: {
+    fontFamily: 'Lora_500Medium',
+    fontSize: 13,
+    marginTop: Spacing.sm,
   },
   searchInput: {
     fontFamily: 'Lora_400Regular',

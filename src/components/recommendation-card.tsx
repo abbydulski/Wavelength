@@ -1,6 +1,15 @@
 import { Image } from 'expo-image';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import {
+    Dimensions,
+    type NativeScrollEvent,
+    type NativeSyntheticEvent,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
 
 import { WavelengthRating } from './wavelength-rating';
 
@@ -26,6 +35,7 @@ type RecommendationCardProps = {
   loveCount?: number;
   loved?: boolean;
   onLove?: (postId: string) => void;
+  isNew?: boolean;
 };
 
 export function RecommendationCard({
@@ -47,10 +57,10 @@ export function RecommendationCard({
   loveCount = 0,
   loved,
   onLove,
+  isNew,
 }: RecommendationCardProps) {
   const theme = useTheme();
   const photos = photoUrls?.length ? photoUrls : photoUrl ? [photoUrl] : [];
-  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
 
   return (
     <Pressable
@@ -74,6 +84,7 @@ export function RecommendationCard({
             <Text style={[styles.metaText, { color: theme.textTertiary }]}>
               {createdAt ? timeAgo(createdAt) : ''}
               {distance ? ` · ${distance}` : ''}
+              {isNew ? <Text style={{ color: theme.accent }}> · new</Text> : ''}
             </Text>
           </View>
         </Pressable>
@@ -86,34 +97,9 @@ export function RecommendationCard({
       {/* Rating */}
       <WavelengthRating rating={rating} />
 
-      {/* Post photos */}
+      {/* Post photos — swipeable */}
       {photos.length > 0 ? (
-        <View style={styles.photoContainer}>
-          <Image source={{ uri: photos[activePhotoIndex] }} style={styles.photo} contentFit="cover" />
-          {photos.length > 1 && (
-            <>
-              {activePhotoIndex > 0 && (
-                <Pressable
-                  style={[styles.arrowBtn, styles.arrowLeft]}
-                  onPress={(e) => { e.stopPropagation?.(); setActivePhotoIndex((i) => i - 1); }}>
-                  <Text style={styles.arrowText}>‹</Text>
-                </Pressable>
-              )}
-              {activePhotoIndex < photos.length - 1 && (
-                <Pressable
-                  style={[styles.arrowBtn, styles.arrowRight]}
-                  onPress={(e) => { e.stopPropagation?.(); setActivePhotoIndex((i) => i + 1); }}>
-                  <Text style={styles.arrowText}>›</Text>
-                </Pressable>
-              )}
-              <View style={styles.dotsRow}>
-                {photos.map((_, i) => (
-                  <View key={i} style={[styles.dot, i === activePhotoIndex && styles.dotActive]} />
-                ))}
-              </View>
-            </>
-          )}
-        </View>
+        <PhotoCarousel photos={photos} />
       ) : null}
 
       {/* The human note */}
@@ -153,6 +139,49 @@ function timeAgo(dateStr: string): string {
   const weeks = Math.floor(days / 7);
   if (weeks < 4) return `${weeks}w ago`;
   return new Date(dateStr).toLocaleDateString();
+}
+
+function PhotoCarousel({ photos }: { photos: string[] }) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+  const photoWidth = Math.min(Dimensions.get('window').width - Spacing.xs * 2, 600);
+
+  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const x = e.nativeEvent.contentOffset.x;
+    const idx = Math.round(x / photoWidth);
+    setActiveIndex(idx);
+  }, [photoWidth]);
+
+  if (photos.length === 1) {
+    return (
+      <View style={styles.photoContainer}>
+        <Image source={{ uri: photos[0] }} style={styles.photo} contentFit="cover" />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.photoContainer}>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        decelerationRate="fast"
+        style={{ width: photoWidth }}>
+        {photos.map((uri, i) => (
+          <Image key={i} source={{ uri }} style={[styles.photo, { width: photoWidth }]} contentFit="cover" />
+        ))}
+      </ScrollView>
+      <View style={styles.dotsRow}>
+        {photos.map((_, i) => (
+          <View key={i} style={[styles.dot, i === activeIndex && styles.dotActive]} />
+        ))}
+      </View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -221,26 +250,7 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 4 / 3,
   },
-  arrowBtn: {
-    position: 'absolute' as const,
-    top: '50%',
-    marginTop: -14,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-  },
-  arrowLeft: { left: 6 },
-  arrowRight: { right: 6 },
-  arrowText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600' as const,
-    lineHeight: 20,
-    marginTop: -1,
-  },
+
   dotsRow: {
     position: 'absolute' as const,
     bottom: 6,

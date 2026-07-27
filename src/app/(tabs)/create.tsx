@@ -1,9 +1,10 @@
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    Animated,
     KeyboardAvoidingView,
     Platform,
     Pressable,
@@ -37,6 +38,18 @@ export default function CreateScreen() {
   const [category, setCategory] = useState<CategoryKey | ''>('');
   const [caption, setCaption] = useState('');
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (toast) {
+      Animated.sequence([
+        Animated.timing(toastOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+        Animated.delay(2000),
+        Animated.timing(toastOpacity, { toValue: 0, duration: 400, useNativeDriver: true }),
+      ]).start(() => setToast(null));
+    }
+  }, [toast, toastOpacity]);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -190,7 +203,7 @@ export default function CreateScreen() {
       setCategory('');
       setCaption('');
       import('@/lib/haptics').then(h => h.hapticSuccess());
-      showAlert('Posted!', 'Your recommendation is live.');
+      setToast('Your recommendation is live.');
     } catch (err: any) {
       console.error('Submit error:', err);
       showAlert('Error', err.message ?? 'Something went wrong');
@@ -315,6 +328,13 @@ export default function CreateScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+
+      {/* Inline toast */}
+      {toast && (
+        <Animated.View style={[styles.toast, { opacity: toastOpacity, backgroundColor: theme.accent }]}>
+          <Text style={styles.toastText}>{toast}</Text>
+        </Animated.View>
+      )}
     </ThemedView>
   );
 }
@@ -384,5 +404,18 @@ const styles = StyleSheet.create({
   submitText: {
     fontFamily: 'Lora_600SemiBold',
     fontSize: FontSize.base,
+  },
+  toast: {
+    position: 'absolute',
+    bottom: 100,
+    alignSelf: 'center',
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: 20,
+  },
+  toastText: {
+    color: '#fff',
+    fontFamily: 'Lora_500Medium',
+    fontSize: 13,
   },
 });

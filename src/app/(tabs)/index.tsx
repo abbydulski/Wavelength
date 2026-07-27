@@ -1,5 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
     FlatList,
     Pressable,
@@ -50,6 +51,7 @@ export default function FeedScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loves, setLoves] = useState<LoveMap>({});
+  const lastSeenRef = useRef<string | null>(null);
 
   const fetchFeed = useCallback(async () => {
     if (!user) return;
@@ -160,7 +162,17 @@ export default function FeedScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchFeed().finally(() => setLoading(false));
+      // Load last-seen timestamp on first focus
+      if (!lastSeenRef.current) {
+        AsyncStorage.getItem('feed_last_seen').then((val) => {
+          lastSeenRef.current = val || new Date(0).toISOString();
+        });
+      }
+      fetchFeed().finally(() => {
+        setLoading(false);
+        // Update last-seen after loading
+        AsyncStorage.setItem('feed_last_seen', new Date().toISOString());
+      });
     }, [fetchFeed])
   );
 
@@ -184,6 +196,7 @@ export default function FeedScreen() {
         photoUrls={item.photo_urls}
         createdAt={item.created_at}
         isNetwork
+        isNew={!!lastSeenRef.current && item.created_at > lastSeenRef.current && item.user_id !== user?.id}
         onPressUser={() => router.push(`/user/${item.user_id}`)}
         postId={item.id}
         loveCount={loves[item.id]?.count ?? 0}
@@ -200,6 +213,9 @@ export default function FeedScreen() {
         <View style={[styles.content, ContentContainerWeb]}>
           <View style={styles.header}>
             <Text style={[styles.brandName, { color: theme.text }]}>Wavelength</Text>
+            <Pressable onPress={() => router.push('/activity')} hitSlop={8}>
+              <Text style={[styles.activityLink, { color: theme.textTertiary }]}>Activity</Text>
+            </Pressable>
           </View>
           {loading ? (
             <SkeletonList count={3} type="card" />
@@ -241,12 +257,19 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   content: { flex: 1, paddingTop: WebNavHeight },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.lg,
   },
   brandName: {
     fontFamily: 'Lora_600SemiBold',
     fontSize: FontSize['2xl'],
+  },
+  activityLink: {
+    fontFamily: 'Lora_400Regular',
+    fontSize: 13,
   },
   loader: { marginTop: Spacing['3xl'] },
   listContent: {

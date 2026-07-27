@@ -20,7 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { WavelengthRating } from '@/components/wavelength-rating';
-import { BorderRadius, BottomTabInset, ContentContainerWeb, FontSize, Spacing, WebNavHeight } from '@/constants/theme';
+import { BottomTabInset, ContentContainerWeb, FontSize, Spacing, WebNavHeight } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/auth-provider';
@@ -45,6 +45,8 @@ export default function ProfileScreen() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [followRequests, setFollowRequests] = useState<{ id: string; from_user_id: string; display_name: string }[]>([]);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editBio, setEditBio] = useState('');
@@ -54,7 +56,7 @@ export default function ProfileScreen() {
     if (!user) return;
     setLoading(true);
     try {
-      const [profileRes, postsRes, requestsRes] = await Promise.all([
+      const [profileRes, postsRes, requestsRes, followersRes, followingRes] = await Promise.all([
         supabase.from('users').select('display_name, bio, photo_url, is_private').eq('id', user.id).single(),
         supabase
           .from('posts')
@@ -65,6 +67,8 @@ export default function ProfileScreen() {
           .from('follow_requests')
           .select('id, from_user_id, users:users!follow_requests_from_user_id_fkey(display_name)')
           .eq('to_user_id', user.id),
+        supabase.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', user.id),
+        supabase.from('follows').select('id', { count: 'exact', head: true }).eq('follower_id', user.id),
       ]);
       if (profileRes.data) {
         setDisplayName(profileRes.data.display_name ?? '');
@@ -73,6 +77,8 @@ export default function ProfileScreen() {
         setIsPrivate((profileRes.data as any).is_private ?? false);
       }
       setPosts((postsRes.data as UserPost[]) ?? []);
+      setFollowerCount(followersRes.count ?? 0);
+      setFollowingCount(followingRes.count ?? 0);
       setFollowRequests(
         (requestsRes.data ?? []).map((r: any) => ({
           id: r.id,
@@ -253,29 +259,30 @@ export default function ProfileScreen() {
               {editing ? (
                 <>
                   <TextInput
-                    style={[styles.editInput, { color: theme.text, borderColor: theme.border }]}
+                    style={[styles.editInput, { color: theme.text, borderBottomColor: theme.border }]}
                     value={editName}
                     onChangeText={setEditName}
                     placeholder="Display name"
                     placeholderTextColor={theme.textTertiary}
+                    autoFocus
                   />
                   <TextInput
-                    style={[styles.editInput, styles.editBioInput, { color: theme.text, borderColor: theme.border }]}
+                    style={[styles.editInput, styles.editBioInput, { color: theme.text, borderBottomColor: theme.border }]}
                     value={editBio}
                     onChangeText={setEditBio}
-                    placeholder="Bio"
+                    placeholder="Add a bio..."
                     placeholderTextColor={theme.textTertiary}
                     multiline
                   />
                   <View style={styles.editActions}>
                     <Pressable onPress={() => setEditing(false)}>
-                      <Text style={[styles.editActionText, { color: theme.textSecondary }]}>Cancel</Text>
+                      <Text style={[styles.editActionText, { color: theme.textTertiary }]}>cancel</Text>
                     </Pressable>
-                    <Pressable
-                      onPress={saveProfile}
-                      disabled={saving}
-                      style={[styles.saveBtn, { backgroundColor: theme.accent }]}>
-                      <Text style={styles.saveBtnText}>{saving ? 'Saving...' : 'Save'}</Text>
+                    <Text style={{ color: theme.border }}>·</Text>
+                    <Pressable onPress={saveProfile} disabled={saving}>
+                      <Text style={[styles.editActionText, { color: theme.accent }]}>
+                        {saving ? 'saving...' : 'save'}
+                      </Text>
                     </Pressable>
                   </View>
                 </>
@@ -285,12 +292,12 @@ export default function ProfileScreen() {
                     {displayName || user?.email?.split('@')[0] || 'You'}
                   </Text>
                   {bio ? (
-                    <ThemedText themeColor="textSecondary" style={styles.bioText}>
+                    <Text style={[styles.bioText, { color: theme.textSecondary }]}>
                       {bio}
-                    </ThemedText>
+                    </Text>
                   ) : null}
-                  <Text style={[styles.postsCount, { color: theme.textSecondary }]}>
-                    {posts.length} {posts.length === 1 ? 'recommendation' : 'recommendations'}
+                  <Text style={[styles.statsText, { color: theme.textSecondary }]}>
+                    {posts.length} {posts.length === 1 ? 'rec' : 'recs'} · {followerCount} {followerCount === 1 ? 'follower' : 'followers'} · {followingCount} following
                   </Text>
                   <Pressable onPress={startEditing}>
                     <Text style={[styles.editProfileText, { color: theme.accent }]}>Edit profile</Text>
@@ -435,25 +442,18 @@ const styles = StyleSheet.create({
   privacyLabel: { fontFamily: 'Lora_500Medium', fontSize: FontSize.sm },
   privacyHint: { fontSize: 11, lineHeight: 16 },
   signOutText: { fontSize: FontSize.sm, fontFamily: 'Lora_400Regular', marginTop: Spacing.sm },
-  postsCount: { fontSize: FontSize.sm },
+  statsText: { fontSize: FontSize.sm },
   bioText: { fontSize: FontSize.sm },
   editProfileText: { fontSize: FontSize.sm, fontWeight: '600' },
   editInput: {
-    borderWidth: 1,
-    borderRadius: BorderRadius.md,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    fontFamily: 'Lora_400Regular',
     fontSize: FontSize.base,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingVertical: Spacing.xs,
   },
-  editBioInput: { minHeight: 60, textAlignVertical: 'top' },
-  editActions: { flexDirection: 'row', gap: Spacing.md, alignItems: 'center' },
-  editActionText: { fontSize: FontSize.sm, fontWeight: '500' },
-  saveBtn: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.md,
-  },
-  saveBtnText: { color: '#fff', fontSize: FontSize.sm, fontWeight: '600' },
+  editBioInput: { minHeight: 50, textAlignVertical: 'top' as const },
+  editActions: { flexDirection: 'row' as const, gap: Spacing.sm, alignItems: 'center' as const, marginTop: Spacing.xs },
+  editActionText: { fontFamily: 'Lora_400Regular', fontSize: 12 },
   requestsSection: {
     paddingHorizontal: Spacing.xl,
     paddingBottom: Spacing.lg,
