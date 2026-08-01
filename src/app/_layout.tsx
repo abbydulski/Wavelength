@@ -78,6 +78,7 @@ function RootLayoutNav() {
 
         <Stack.Screen name="user/[id]" options={{ presentation: 'card' }} />
         <Stack.Screen name="activity" options={{ presentation: 'card' }} />
+        <Stack.Screen name="privacy" options={{ presentation: 'card' }} />
       </Stack>
     </ThemeProvider>
   );

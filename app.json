@@ -9,14 +9,17 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/images/icon.png",
-      "bundleIdentifier": "com.wavelength.app"
+      "bundleIdentifier": "com.getwavelength.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#FAF8F5",
         "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
-      "package": "com.wavelength.app",
+      "package": "com.getwavelength.app",
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -42,6 +45,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "59f5171f-ef71-4fae-ace3-8f7e87940155"
+      }
     }
   }
 }
