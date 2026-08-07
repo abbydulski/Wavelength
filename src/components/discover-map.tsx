@@ -1,8 +1,18 @@
 import { useEffect, useRef } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
-import { FontSize, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+
+// Only import react-native-maps on native
+let MapView: any = null;
+let Marker: any = null;
+let Circle: any = null;
+if (Platform.OS !== 'web') {
+  const Maps = require('react-native-maps');
+  MapView = Maps.default;
+  Marker = Maps.Marker;
+  Circle = Maps.Circle;
+}
 
 type MapPlace = {
   place_id: string;
@@ -28,10 +38,48 @@ export function DiscoverMap({ places, centerLat, centerLng, onPressPlace }: Disc
   }
 
   return (
-    <View style={[styles.fallback, { backgroundColor: theme.backgroundElement }]}>
-      <Text style={[styles.fallbackText, { color: theme.textSecondary }]}>
-        {places.length} places nearby
-      </Text>
+    <NativeMap places={places} centerLat={centerLat} centerLng={centerLng} onPressPlace={onPressPlace} />
+  );
+}
+
+function NativeMap({ places, centerLat, centerLng, onPressPlace }: DiscoverMapProps) {
+  const theme = useTheme();
+  const validPlaces = places.filter((p) => p.lat && p.lng);
+
+  if (!MapView) return null;
+
+  return (
+    <View style={styles.mapContainer}>
+      <MapView
+        style={styles.mapContainer}
+        initialRegion={{
+          latitude: centerLat,
+          longitude: centerLng,
+          latitudeDelta: 2.5,
+          longitudeDelta: 2.5,
+        }}
+        showsUserLocation
+        showsMyLocationButton={false}
+      >
+        {/* 100-mile radius */}
+        <Circle
+          center={{ latitude: centerLat, longitude: centerLng }}
+          radius={160934}
+          strokeColor="rgba(155,155,155,0.4)"
+          strokeWidth={0.75}
+          fillColor="rgba(155,155,155,0.03)"
+          lineDashPattern={[4, 6]}
+        />
+        {validPlaces.map((p) => (
+          <Marker
+            key={p.place_id}
+            coordinate={{ latitude: p.lat!, longitude: p.lng! }}
+            onPress={() => onPressPlace?.(p.place_id)}
+          >
+            <View style={[styles.dotMarker, { backgroundColor: ratingColor(p.avg_rating) }]} />
+          </Marker>
+        ))}
+      </MapView>
     </View>
   );
 }
@@ -152,15 +200,16 @@ const styles = StyleSheet.create({
   mapContainer: {
     flex: 1,
   },
-  fallback: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  fallbackText: {
-    fontSize: FontSize.base,
-    fontFamily: 'Lora_400Regular_Italic',
-    fontStyle: 'italic',
+  dotMarker: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
 });

@@ -12,6 +12,7 @@ import {
     TextInput,
     View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CATEGORIES } from '@/components/category-picker';
 import { DiscoverMap } from '@/components/discover-map';
@@ -67,6 +68,7 @@ export default function DiscoverScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const { location: userLocation, loading: locationLoading } = useLocation();
   const [places, setPlaces] = useState<DiscoverPlace[]>([]);
   const [loading, setLoading] = useState(true);
@@ -213,7 +215,7 @@ export default function DiscoverScreen() {
   return (
     <ThemedView style={styles.container}>
       {/* Floating header */}
-      <View style={[styles.floatingHeader, { paddingTop: WebNavHeight + Spacing.lg, backgroundColor: theme.background + 'E6' }]}>
+      <View style={[styles.floatingHeader, { paddingTop: (Platform.OS === 'web' ? WebNavHeight : insets.top) + Spacing.lg, backgroundColor: theme.background + 'E6' }]}>
         <Text style={[styles.title, { color: theme.text }]}>Discover</Text>
         <TextInput
           style={[styles.searchInput, { color: theme.text, borderBottomColor: theme.border }]}
