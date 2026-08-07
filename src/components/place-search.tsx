@@ -91,7 +91,8 @@ export function PlaceSearch({ onSelect, selectedPlace, onClear }: PlaceSearchPro
                 }))
             );
           }
-        } catch {
+        } catch (err) {
+          console.error('Place search error:', err);
           setResults([]);
         } finally {
           setLoading(false);
