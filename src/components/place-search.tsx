@@ -130,7 +130,7 @@ export function PlaceSearch({ onSelect, selectedPlace, onClear }: PlaceSearchPro
         {loading && <ActivityIndicator size="small" color={theme.accent} />}
       </View>
       {results.length > 0 && (
-        <View style={styles.resultsList}>
+        <View style={[styles.resultsList, { backgroundColor: theme.background }]}>
           {results.map((item) => (
             <Pressable
               key={item.placeId}
@@ -168,6 +168,8 @@ const styles = StyleSheet.create({
   resultsList: {
     marginTop: Spacing.xs,
     maxHeight: 240,
+    zIndex: 10,
+    position: 'relative',
   },
   resultItem: {
     paddingHorizontal: Spacing.xs,
