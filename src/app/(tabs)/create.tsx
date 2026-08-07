@@ -33,6 +33,7 @@ export default function CreateScreen() {
 
   const [place, setPlace] = useState<PlaceResult | null>(null);
   const [gettingLocation, setGettingLocation] = useState(false);
+  const [searchActive, setSearchActive] = useState(false);
   const [photos, setPhotos] = useState<ImagePicker.ImagePickerAsset[]>([]);
   const [rating, setRating] = useState(0);
   const [category, setCategory] = useState<CategoryKey | ''>('');
@@ -236,8 +237,9 @@ export default function CreateScreen() {
                 selectedPlace={place}
                 onSelect={setPlace}
                 onClear={() => setPlace(null)}
+                onSearchActive={setSearchActive}
               />
-              {!place && (
+              {!place && !searchActive && (
                 <Pressable
                   onPress={useCurrentLocation}
                   disabled={gettingLocation}>

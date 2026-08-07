@@ -23,6 +23,7 @@ type PlaceSearchProps = {
   onSelect: (place: PlaceResult) => void;
   selectedPlace: PlaceResult | null;
   onClear: () => void;
+  onSearchActive?: (active: boolean) => void;
 };
 
 const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY ?? '';
@@ -47,7 +48,7 @@ async function fetchPlaceDetails(place: PlaceResult): Promise<PlaceResult> {
   return place;
 }
 
-export function PlaceSearch({ onSelect, selectedPlace, onClear }: PlaceSearchProps) {
+export function PlaceSearch({ onSelect, selectedPlace, onClear, onSearchActive }: PlaceSearchProps) {
   const theme = useTheme();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<PlaceResult[]>([]);
@@ -60,6 +61,7 @@ export function PlaceSearch({ onSelect, selectedPlace, onClear }: PlaceSearchPro
       if (debounceRef.current) clearTimeout(debounceRef.current);
       if (text.length < 3) {
         setResults([]);
+        onSearchActive?.(false);
         return;
       }
       debounceRef.current = setTimeout(async () => {
@@ -81,15 +83,15 @@ export function PlaceSearch({ onSelect, selectedPlace, onClear }: PlaceSearchPro
           );
           const data = await res.json();
           if (data.suggestions) {
-            setResults(
-              data.suggestions
+            const mapped = data.suggestions
                 .filter((s: any) => s.placePrediction)
                 .map((s: any) => ({
                   placeId: s.placePrediction.placeId,
                   name: s.placePrediction.structuredFormat?.mainText?.text ?? s.placePrediction.text?.text ?? '',
                   address: s.placePrediction.structuredFormat?.secondaryText?.text ?? '',
-                }))
-            );
+                }));
+            setResults(mapped);
+            onSearchActive?.(mapped.length > 0);
           }
         } catch (err) {
           console.error('Place search error:', err);
