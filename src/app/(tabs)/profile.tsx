@@ -105,7 +105,9 @@ export default function ProfileScreen() {
     setUploadingPhoto(true);
     try {
       const asset = result.assets[0];
-      const ext = asset.uri.split('.').pop() ?? 'jpg';
+      const rawExt = (asset.uri.split('.').pop() ?? 'jpg').toLowerCase();
+      const ext = rawExt === 'heic' || rawExt === 'heif' ? 'jpg' : rawExt;
+      const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
       const filePath = `${user.id}.${ext}`;
 
       const response = await fetch(asset.uri);
@@ -113,7 +115,7 @@ export default function ProfileScreen() {
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, blob, { upsert: true, contentType: `image/${ext}` });
+        .upload(filePath, blob, { upsert: true, contentType });
 
       if (uploadError) throw uploadError;
 

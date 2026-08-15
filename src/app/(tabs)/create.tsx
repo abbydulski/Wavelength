@@ -58,6 +58,7 @@ export default function CreateScreen() {
       allowsMultipleSelection: true,
       selectionLimit: 5,
       quality: 0.8,
+      exif: false,
     });
     if (!result.canceled) {
       setPhotos((prev) => [...prev, ...result.assets].slice(0, 5));
@@ -170,7 +171,9 @@ export default function CreateScreen() {
       // 3. Upload photos & create post_photos records
       for (let i = 0; i < photos.length; i++) {
         const photo = photos[i];
-        const ext = photo.uri.split('.').pop() ?? 'jpg';
+        const rawExt = (photo.uri.split('.').pop() ?? 'jpg').toLowerCase();
+        const ext = rawExt === 'heic' || rawExt === 'heif' ? 'jpg' : rawExt;
+        const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
         const filePath = `${user.id}/${postData.id}/${i}.${ext}`;
 
         const response = await fetch(photo.uri);
@@ -178,7 +181,7 @@ export default function CreateScreen() {
 
         const { error: uploadError } = await supabase.storage
           .from('post-photos')
-          .upload(filePath, blob, { contentType: `image/${ext}` });
+          .upload(filePath, blob, { contentType });
 
         if (uploadError) {
           console.error('Photo upload error:', uploadError);
