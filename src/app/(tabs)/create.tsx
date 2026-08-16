@@ -23,6 +23,7 @@ import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, ContentContainerWeb, FontSize, Spacing, WebNavHeight } from '@/constants/theme';
 import { useLocation } from '@/hooks/use-location';
 import { useTheme } from '@/hooks/use-theme';
+import { convertHeicOnWeb } from '@/lib/heic';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/auth-provider';
 
@@ -62,35 +63,7 @@ export default function CreateScreen() {
       preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
     });
     if (!result.canceled) {
-      let assets = result.assets;
-      // On web, convert non-displayable formats (HEIC/HEIF) to JPEG via Canvas
-      if (Platform.OS === 'web') {
-        assets = await Promise.all(
-          assets.map(async (asset) => {
-            const mime = asset.mimeType?.toLowerCase() ?? '';
-            if (mime === 'image/heic' || mime === 'image/heif') {
-              try {
-                const resp = await fetch(asset.uri);
-                const blob = await resp.blob();
-                const bitmap = await createImageBitmap(blob);
-                const canvas = document.createElement('canvas');
-                canvas.width = bitmap.width;
-                canvas.height = bitmap.height;
-                const ctx = canvas.getContext('2d');
-                ctx?.drawImage(bitmap, 0, 0);
-                const jpegBlob: Blob = await new Promise((resolve) =>
-                  canvas.toBlob((b) => resolve(b!), 'image/jpeg', 0.85)
-                );
-                const jpegUri = URL.createObjectURL(jpegBlob);
-                return { ...asset, uri: jpegUri, mimeType: 'image/jpeg' };
-              } catch {
-                return asset; // Fall through if conversion fails
-              }
-            }
-            return asset;
-          })
-        );
-      }
+      const assets = await Promise.all(result.assets.map((a) => convertHeicOnWeb(a)));
       setPhotos((prev) => [...prev, ...assets].slice(0, 5));
     }
   };
