@@ -105,7 +105,28 @@ export default function ProfileScreen() {
 
     setUploadingPhoto(true);
     try {
-      const asset = result.assets[0];
+      let asset = result.assets[0];
+      // On web, convert HEIC/HEIF to JPEG via Canvas so browser can display it
+      if (Platform.OS === 'web') {
+        const mime = asset.mimeType?.toLowerCase() ?? '';
+        if (mime === 'image/heic' || mime === 'image/heif') {
+          try {
+            const resp = await fetch(asset.uri);
+            const blob = await resp.blob();
+            const bitmap = await createImageBitmap(blob);
+            const canvas = document.createElement('canvas');
+            canvas.width = bitmap.width;
+            canvas.height = bitmap.height;
+            const ctx = canvas.getContext('2d');
+            ctx?.drawImage(bitmap, 0, 0);
+            const jpegBlob: Blob = await new Promise((resolve) =>
+              canvas.toBlob((b) => resolve(b!), 'image/jpeg', 0.85)
+            );
+            const jpegUri = URL.createObjectURL(jpegBlob);
+            asset = { ...asset, uri: jpegUri, mimeType: 'image/jpeg' };
+          } catch { /* fall through with original asset */ }
+        }
+      }
       // Determine content type from mimeType (reliable) or URI extension (fallback)
       const mime = asset.mimeType?.toLowerCase();
       let contentType = 'image/jpeg';

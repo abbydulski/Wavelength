@@ -7,6 +7,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     Pressable,
+    Image as RNImage,
     ScrollView,
     StyleSheet,
     Text,
@@ -61,7 +62,36 @@ export default function CreateScreen() {
       preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
     });
     if (!result.canceled) {
-      setPhotos((prev) => [...prev, ...result.assets].slice(0, 5));
+      let assets = result.assets;
+      // On web, convert non-displayable formats (HEIC/HEIF) to JPEG via Canvas
+      if (Platform.OS === 'web') {
+        assets = await Promise.all(
+          assets.map(async (asset) => {
+            const mime = asset.mimeType?.toLowerCase() ?? '';
+            if (mime === 'image/heic' || mime === 'image/heif') {
+              try {
+                const resp = await fetch(asset.uri);
+                const blob = await resp.blob();
+                const bitmap = await createImageBitmap(blob);
+                const canvas = document.createElement('canvas');
+                canvas.width = bitmap.width;
+                canvas.height = bitmap.height;
+                const ctx = canvas.getContext('2d');
+                ctx?.drawImage(bitmap, 0, 0);
+                const jpegBlob: Blob = await new Promise((resolve) =>
+                  canvas.toBlob((b) => resolve(b!), 'image/jpeg', 0.85)
+                );
+                const jpegUri = URL.createObjectURL(jpegBlob);
+                return { ...asset, uri: jpegUri, mimeType: 'image/jpeg' };
+              } catch {
+                return asset; // Fall through if conversion fails
+              }
+            }
+            return asset;
+          })
+        );
+      }
+      setPhotos((prev) => [...prev, ...assets].slice(0, 5));
     }
   };
 
@@ -274,7 +304,7 @@ export default function CreateScreen() {
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photosRow}>
                 {photos.map((photo, i) => (
                   <View key={i} style={styles.photoWrapper}>
-                    <Image source={{ uri: photo.uri }} style={styles.photoThumb} />
+                    <RNImage source={{ uri: photo.uri }} style={styles.photoThumb} />
                     <Pressable
                       style={styles.removePhoto}
                       onPress={() => removePhoto(i)}>
