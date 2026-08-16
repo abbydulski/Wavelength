@@ -1,4 +1,4 @@
-import { Image } from 'expo-image';
+import { CrossImage as Image } from '@/components/cross-image';
 import * as SplashScreen from 'expo-splash-screen';
 import { useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';

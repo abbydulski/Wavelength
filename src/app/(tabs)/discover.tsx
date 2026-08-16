@@ -1,4 +1,4 @@
-import { Image } from 'expo-image';
+import { CrossImage as Image } from '@/components/cross-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {

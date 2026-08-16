@@ -1,4 +1,4 @@
-import { Image } from 'expo-image';
+import { CrossImage as Image } from '@/components/cross-image';
 import { version } from 'expo/package.json';
 import { StyleSheet, useColorScheme } from 'react-native';
 

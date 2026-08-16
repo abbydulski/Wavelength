@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { useCallback, useRef, useState } from 'react';
 import {
     Dimensions,
@@ -10,6 +9,8 @@ import {
     Text,
     View,
 } from 'react-native';
+
+import { CrossImage as Image } from './cross-image';
 
 import { WavelengthRating } from './wavelength-rating';
 
