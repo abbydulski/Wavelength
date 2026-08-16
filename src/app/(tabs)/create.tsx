@@ -172,9 +172,18 @@ export default function CreateScreen() {
       // 3. Upload photos & create post_photos records
       for (let i = 0; i < photos.length; i++) {
         const photo = photos[i];
-        const rawExt = (photo.uri.split('.').pop() ?? 'jpg').toLowerCase();
-        const ext = rawExt === 'heic' || rawExt === 'heif' ? 'jpg' : rawExt;
-        const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
+        // Determine content type from mimeType (reliable) or URI extension (fallback)
+        const mime = photo.mimeType?.toLowerCase();
+        let contentType = 'image/jpeg';
+        let ext = 'jpg';
+        if (mime === 'image/png') { contentType = 'image/png'; ext = 'png'; }
+        else if (mime === 'image/webp') { contentType = 'image/webp'; ext = 'webp'; }
+        else if (mime === 'image/heic' || mime === 'image/heif') { contentType = 'image/jpeg'; ext = 'jpg'; }
+        else if (!mime) {
+          // Fallback: try URI extension
+          const uriExt = (photo.uri.split('.').pop() ?? '').toLowerCase();
+          if (uriExt === 'png') { contentType = 'image/png'; ext = 'png'; }
+        }
         const filePath = `${user.id}/${postData.id}/${i}.${ext}`;
 
         const response = await fetch(photo.uri);

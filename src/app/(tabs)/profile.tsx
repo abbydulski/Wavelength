@@ -106,9 +106,17 @@ export default function ProfileScreen() {
     setUploadingPhoto(true);
     try {
       const asset = result.assets[0];
-      const rawExt = (asset.uri.split('.').pop() ?? 'jpg').toLowerCase();
-      const ext = rawExt === 'heic' || rawExt === 'heif' ? 'jpg' : rawExt;
-      const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
+      // Determine content type from mimeType (reliable) or URI extension (fallback)
+      const mime = asset.mimeType?.toLowerCase();
+      let contentType = 'image/jpeg';
+      let ext = 'jpg';
+      if (mime === 'image/png') { contentType = 'image/png'; ext = 'png'; }
+      else if (mime === 'image/webp') { contentType = 'image/webp'; ext = 'webp'; }
+      else if (mime === 'image/heic' || mime === 'image/heif') { contentType = 'image/jpeg'; ext = 'jpg'; }
+      else if (!mime) {
+        const uriExt = (asset.uri.split('.').pop() ?? '').toLowerCase();
+        if (uriExt === 'png') { contentType = 'image/png'; ext = 'png'; }
+      }
       const filePath = `${user.id}.${ext}`;
 
       const response = await fetch(asset.uri);
