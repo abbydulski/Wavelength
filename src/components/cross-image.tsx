@@ -1,20 +1,23 @@
 /**
  * Cross-platform Image component.
- * Uses React Native's Image on web (renders as a standard <img> tag) for reliable
- * blob URI and remote URL support. Uses expo-image on native for performance.
+ * Uses React Native's Image on web for reliable blob/remote URL rendering.
+ * Uses expo-image on native for performance and caching.
  */
 import { Image as ExpoImage, type ImageProps as ExpoImageProps } from 'expo-image';
-import { Image as RNImage, Platform } from 'react-native';
+import { Platform, Image as RNImage } from 'react-native';
 
 type CrossImageProps = ExpoImageProps;
 
-function WebImageWrapper({ source, style, contentFit, contentPosition, ...rest }: any) {
+function WebImageWrapper(props: any) {
+  const { source, style, contentFit, accessibilityLabel, testID } = props;
+  const resizeMode = contentFit === 'contain' ? 'contain' : contentFit === 'fill' ? 'stretch' : 'cover';
   return (
     <RNImage
       source={source}
       style={style}
-      resizeMode={contentFit === 'contain' ? 'contain' : contentFit === 'fill' ? 'stretch' : 'cover'}
-      {...rest}
+      resizeMode={resizeMode}
+      accessibilityLabel={accessibilityLabel}
+      testID={testID}
     />
   );
 }
