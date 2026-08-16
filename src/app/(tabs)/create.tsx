@@ -59,6 +59,7 @@ export default function CreateScreen() {
       selectionLimit: 5,
       quality: 0.8,
       exif: false,
+      preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
     });
     if (!result.canceled) {
       setPhotos((prev) => [...prev, ...result.assets].slice(0, 5));
