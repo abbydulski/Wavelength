@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { SkeletonList } from '@/components/skeleton';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import {
@@ -177,7 +178,7 @@ export default function SearchScreen() {
             autoCorrect={false}
           />
           {loading ? (
-            <ActivityIndicator style={styles.loader} color={theme.accent} />
+            <SkeletonList count={4} type="place" />
           ) : (
             <FlatList
               data={results}
@@ -222,7 +223,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Lora_400Regular',
     marginBottom: Spacing.md,
   },
-  loader: { marginTop: Spacing['2xl'] },
   listContent: {
     paddingBottom: Spacing['2xl'],
   },

@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CATEGORIES } from '@/components/category-picker';
 import { DiscoverMap } from '@/components/discover-map';
+import { SkeletonList } from '@/components/skeleton';
 import { ThemedView } from '@/components/themed-view';
 import { WavelengthRating } from '@/components/wavelength-rating';
 import { FontSize, Spacing, WebNavHeight } from '@/constants/theme';
@@ -73,6 +74,7 @@ export default function DiscoverScreen() {
   const { location: userLocation, loading: locationLoading } = useLocation();
   const [places, setPlaces] = useState<DiscoverPlace[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -94,8 +96,10 @@ export default function DiscoverScreen() {
       });
       if (error) throw error;
       setPlaces(data ?? []);
+      setError(false);
     } catch (err) {
       console.error('Discover fetch error:', err);
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -262,6 +266,16 @@ export default function DiscoverScreen() {
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={theme.accent} />
         </View>
+      ) : error && places.length === 0 ? (
+        <View style={styles.centered}>
+          <Text style={[styles.emptyTitle, { color: theme.text }]}>Couldn&apos;t load the map</Text>
+          <Text style={[styles.emptyBody, { color: theme.textSecondary }]}>
+            Check your connection and try again.
+          </Text>
+          <Pressable onPress={fetchPlaces}>
+            <Text style={[styles.emptyCta, { color: theme.accent }]}>Retry →</Text>
+          </Pressable>
+        </View>
       ) : filteredPlaces.length === 0 ? (
         <View style={styles.centered}>
           <Text style={[styles.emptyTitle, { color: theme.text }]}>
@@ -325,7 +339,7 @@ export default function DiscoverScreen() {
 
             {/* Ratings */}
             {detailLoading ? (
-              <ActivityIndicator color={theme.accent} style={{ marginTop: Spacing.xl }} />
+              <SkeletonList count={3} type="card" />
             ) : placeRatings.length === 0 ? (
               <Text style={[styles.overlayEmpty, { color: theme.textTertiary }]}>
                 No reviews yet

@@ -40,6 +40,8 @@ export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const [posts, setPosts] = useState<UserPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -87,12 +89,20 @@ export default function ProfileScreen() {
           display_name: r.users?.display_name ?? 'Someone',
         }))
       );
+      setError(false);
     } catch (err) {
       console.error('Profile fetch error:', err);
+      setError(true);
     } finally {
       setLoading(false);
     }
   }, [user]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchProfile();
+    setRefreshing(false);
+  }, [fetchProfile]);
 
   const pickProfilePhoto = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -371,6 +381,16 @@ export default function ProfileScreen() {
           <View style={styles.centered}>
             <ActivityIndicator size="large" color={theme.accent} />
           </View>
+        ) : error && posts.length === 0 ? (
+          <View style={styles.centered}>
+            <Text style={[styles.emptyTitle, { color: theme.text }]}>Couldn&apos;t load your profile</Text>
+            <ThemedText themeColor="textSecondary" style={styles.emptySubtitle}>
+              Check your connection and try again.
+            </ThemedText>
+            <Pressable onPress={onRefresh}>
+              <Text style={[styles.retryText, { color: theme.accent }]}>Retry →</Text>
+            </Pressable>
+          </View>
         ) : posts.length === 0 ? (
           <View style={styles.centered}>
             <Text style={[styles.emptyTitle, { color: theme.text }]}>No posts yet</Text>
@@ -387,8 +407,8 @@ export default function ProfileScreen() {
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl
-                refreshing={false}
-                onRefresh={fetchProfile}
+                refreshing={refreshing}
+                onRefresh={onRefresh}
                 tintColor={theme.accent}
               />
             }
@@ -487,6 +507,7 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: Spacing.md },
   emptyTitle: { fontFamily: 'Lora_500Medium', fontSize: FontSize.lg },
   emptySubtitle: { fontSize: FontSize.base, textAlign: 'center' },
+  retryText: { fontFamily: 'Lora_500Medium', fontSize: FontSize.sm, marginTop: Spacing.sm },
   listContent: {
     paddingHorizontal: Spacing.lg,
     paddingBottom: BottomTabInset + Spacing['2xl'],

@@ -50,14 +50,23 @@ export default function FeedScreen() {
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(false);
   const [loves, setLoves] = useState<LoveMap>({});
   const lastSeenRef = useRef<string | null>(null);
 
   const fetchFeed = useCallback(async () => {
     if (!user) return;
     try {
-      // Get posts from people the user follows, most recent first
-      const { data, error } = await supabase
+      // People the user follows (+ self) — resolved first so the posts query
+      // has a concrete id list.
+      const followsRes = await supabase
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', user.id);
+      const authorIds = [user.id, ...(followsRes.data?.map((f) => f.following_id) ?? [])];
+
+      // Get posts from those authors, most recent first
+      const { data, error: feedError } = await supabase
         .from('posts')
         .select(`
           id,
@@ -69,27 +78,14 @@ export default function FeedScreen() {
           created_at,
           user:users!posts_user_id_fkey(display_name, photo_url),
           place:places!posts_place_id_fkey(name, address),
-          photos:post_photos(storage_path)
+          photos:post_photos(storage_path, display_order)
         `)
-        .in(
-          'user_id',
-          // Include own posts + posts from people the user follows
-          [
-            user.id,
-            ...((await supabase
-              .from('follows')
-              .select('following_id')
-              .eq('follower_id', user.id)
-            ).data?.map((f) => f.following_id) ?? []),
-          ]
-        )
+        .in('user_id', authorIds)
         .order('created_at', { ascending: false })
         .limit(50);
 
-      if (error) {
-        console.error('Feed error:', error);
-        return;
-      }
+      if (feedError) throw feedError;
+      setError(false);
 
       const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
       const mapped: FeedPost[] = (data ?? []).map((p: any) => {
@@ -134,29 +130,34 @@ export default function FeedScreen() {
       }
     } catch (err) {
       console.error('Feed fetch error:', err);
+      setError(true);
     }
   }, [user]);
 
   const handleLove = useCallback(async (postId: string) => {
     if (!user) return;
     const current = loves[postId]?.loved;
-    if (current) {
-      // Remove love
-      await supabase.from('post_reactions').delete().eq('post_id', postId).eq('user_id', user.id);
-      setLoves((prev) => ({
-        ...prev,
-        [postId]: { count: Math.max(0, (prev[postId]?.count ?? 1) - 1), loved: false },
-      }));
-    } else {
-      // Add love
-      await supabase.from('post_reactions').upsert(
-        { post_id: postId, user_id: user.id, reaction: 'agree' },
-        { onConflict: 'post_id,user_id' }
-      );
-      setLoves((prev) => ({
-        ...prev,
-        [postId]: { count: (prev[postId]?.count ?? 0) + 1, loved: true },
-      }));
+    const prevState = loves[postId] ?? { count: 0, loved: false };
+    import('@/lib/haptics').then((h) => h.hapticLight());
+
+    // Optimistic update, rolled back if the write fails.
+    setLoves((prev) => ({
+      ...prev,
+      [postId]: current
+        ? { count: Math.max(0, (prev[postId]?.count ?? 1) - 1), loved: false }
+        : { count: (prev[postId]?.count ?? 0) + 1, loved: true },
+    }));
+
+    const { error: rxError } = current
+      ? await supabase.from('post_reactions').delete().eq('post_id', postId).eq('user_id', user.id)
+      : await supabase.from('post_reactions').upsert(
+          { post_id: postId, user_id: user.id, reaction: 'agree' },
+          { onConflict: 'post_id,user_id' }
+        );
+
+    if (rxError) {
+      // Revert on failure so UI matches the DB.
+      setLoves((prev) => ({ ...prev, [postId]: prevState }));
     }
   }, [user, loves]);
 
@@ -219,6 +220,16 @@ export default function FeedScreen() {
           </View>
           {loading ? (
             <SkeletonList count={3} type="card" />
+          ) : error && posts.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={[styles.emptyTitle, { color: theme.text }]}>Couldn&apos;t load your feed</Text>
+              <Text style={[styles.emptyBody, { color: theme.textSecondary }]}>
+                Check your connection and try again.
+              </Text>
+              <Pressable onPress={onRefresh}>
+                <Text style={[styles.emptyCta, { color: theme.accent }]}>Retry →</Text>
+              </Pressable>
+            </View>
           ) : (
             <FlatList
               data={posts}
@@ -271,7 +282,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Lora_400Regular',
     fontSize: 13,
   },
-  loader: { marginTop: Spacing['3xl'] },
   listContent: {
     paddingHorizontal: Spacing.xl,
     paddingBottom: BottomTabInset + Spacing['2xl'],
