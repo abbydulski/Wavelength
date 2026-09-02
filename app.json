@@ -40,6 +40,12 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 120
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Wavelength uses your location to show recommendations from people you trust within about 100 miles."
+        }
       ]
     ],
     "experiments": {
