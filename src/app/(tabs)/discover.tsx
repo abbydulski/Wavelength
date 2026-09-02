@@ -48,6 +48,7 @@ type PlaceRating = {
   created_at: string;
   is_network: boolean;
   post_photos: string[];
+  is_private_locked: boolean;
 };
 
 const FILTER_CATEGORIES = [{ key: '', label: 'All' }, ...CATEGORIES];
@@ -132,51 +133,56 @@ export default function DiscoverScreen() {
     setPlaceRatings([]);
 
     try {
-      const postsRes = await supabase
-        .from('posts')
-        .select('id, user_id, caption, rating, category, created_at, user:users(display_name, photo_url), photos:post_photos(storage_path, display_order)')
-        .eq('place_id', placeId)
-        .eq('is_public', true)
-        .order('created_at', { ascending: false })
-        .limit(20);
+      // Privacy classification (network / public / private-locked) is enforced
+      // server-side by the get_place_ratings SECURITY DEFINER RPC. Locked rows
+      // come back with nulled identity/caption and is_private_locked = true.
+      const { data, error } = await supabase.rpc('get_place_ratings', {
+        p_place_id: placeId,
+        p_user_id: user.id,
+        p_limit: 50,
+      });
+      if (error) throw error;
+      const rows = (data ?? []) as any[];
 
-      const posts = postsRes.data ?? [];
-      let followingSet = new Set<string>();
-      let privateSet = new Set<string>();
-      if (posts.length > 0) {
-        const posterIds = [...new Set(posts.map((p: any) => p.user_id))];
-        const [followRes, privacyRes] = await Promise.all([
-          supabase.from('follows').select('following_id').eq('follower_id', user.id).in('following_id', posterIds),
-          supabase.from('users').select('id, is_private').in('id', posterIds).eq('is_private', true),
-        ]);
-        followingSet = new Set((followRes.data ?? []).map((f: any) => f.following_id));
-        privateSet = new Set((privacyRes.data ?? []).map((u: any) => u.id));
+      // Photos aren't returned by the RPC — fetch them only for the visible
+      // (non-locked) rows, whose parent posts are readable under RLS.
+      const visibleIds = rows.filter((r) => !r.is_private_locked).map((r) => r.post_id);
+      const photosByPost = new Map<string, { storage_path: string; display_order: number }[]>();
+      if (visibleIds.length > 0) {
+        const photosRes = await supabase
+          .from('post_photos')
+          .select('post_id, storage_path, display_order')
+          .in('post_id', visibleIds);
+        for (const ph of photosRes.data ?? []) {
+          const arr = photosByPost.get(ph.post_id) ?? [];
+          arr.push(ph);
+          photosByPost.set(ph.post_id, arr);
+        }
       }
 
       const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-      const mapped: PlaceRating[] = posts
-        .filter((p: any) => {
-          if (p.user_id === user.id) return true;
-          if (privateSet.has(p.user_id) && !followingSet.has(p.user_id)) return false;
-          return true;
-        })
-        .map((p: any) => ({
-          post_id: p.id,
-          user_id: p.user_id,
-          display_name: p.user?.display_name ?? 'Unknown',
-          photo_url: p.user?.photo_url ?? '',
-          caption: p.caption,
-          rating: p.rating,
-          category: p.category,
-          created_at: p.created_at,
-          is_network: followingSet.has(p.user_id),
-          post_photos: (p.photos ?? [])
-            .sort((a: any, b: any) => a.display_order - b.display_order)
-            .map((ph: any) => `${supabaseUrl}/storage/v1/object/public/post-photos/${ph.storage_path}`),
-        }));
+      const mapped: PlaceRating[] = rows.map((r) => ({
+        post_id: r.post_id,
+        user_id: r.user_id ?? '',
+        display_name: r.is_private_locked ? '' : r.display_name ?? 'Unknown',
+        photo_url: r.is_private_locked ? '' : r.photo_url ?? '',
+        caption: r.is_private_locked ? '' : r.caption ?? '',
+        rating: r.rating,
+        category: r.category,
+        created_at: r.created_at,
+        is_network: !!r.is_network,
+        is_private_locked: !!r.is_private_locked,
+        post_photos: r.is_private_locked
+          ? []
+          : (photosByPost.get(r.post_id) ?? [])
+              .sort((a, b) => a.display_order - b.display_order)
+              .map((ph) => `${supabaseUrl}/storage/v1/object/public/post-photos/${ph.storage_path}`),
+      }));
 
       mapped.sort((a, b) => {
+        // Friends first, then named public posts, then anonymous locked ratings.
         if (a.is_network !== b.is_network) return a.is_network ? -1 : 1;
+        if (a.is_private_locked !== b.is_private_locked) return a.is_private_locked ? 1 : -1;
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
 
@@ -325,37 +331,47 @@ export default function DiscoverScreen() {
                 No reviews yet
               </Text>
             ) : (
-              placeRatings.map((r) => (
-                <View key={r.post_id} style={[styles.reviewItem, { borderBottomColor: theme.border }]}>
-                  <View style={styles.reviewHeader}>
+              placeRatings.map((r) =>
+                r.is_private_locked ? (
+                  <View key={r.post_id} style={styles.lockedRow}>
                     <View style={[styles.reviewAvatar, { backgroundColor: theme.backgroundElement }]}>
-                      {r.photo_url ? (
-                        <Image source={{ uri: r.photo_url }} style={styles.reviewAvatarImg} />
-                      ) : (
-                        <Text style={[styles.reviewAvatarText, { color: theme.textTertiary }]}>
-                          {r.display_name?.charAt(0).toUpperCase()}
-                        </Text>
-                      )}
+                      <Text style={[styles.reviewAvatarText, { color: theme.textTertiary }]}>🔒</Text>
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.reviewName, { color: theme.text }]}>
-                        {r.display_name}
-                        {r.is_network ? <Text style={{ color: theme.accent }}> · friend</Text> : ''}
-                      </Text>
-                      <Text style={[styles.reviewDate, { color: theme.textTertiary }]}>{timeAgo(r.created_at)}</Text>
-                    </View>
+                    <Text style={[styles.lockedName, { color: theme.textTertiary }]}>Private member</Text>
                     <WavelengthRating rating={r.rating} size="sm" />
                   </View>
-                  {r.post_photos.length > 0 && (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.reviewPhotos}>
-                      {r.post_photos.map((uri, i) => (
-                        <Image key={i} source={{ uri }} style={styles.reviewPhoto} contentFit="cover" />
-                      ))}
-                    </ScrollView>
-                  )}
-                  <Text style={[styles.reviewCaption, { color: theme.text }]}>"{r.caption}"</Text>
-                </View>
-              ))
+                ) : (
+                  <View key={r.post_id} style={[styles.reviewItem, { borderBottomColor: theme.border }]}>
+                    <View style={styles.reviewHeader}>
+                      <View style={[styles.reviewAvatar, { backgroundColor: theme.backgroundElement }]}>
+                        {r.photo_url ? (
+                          <Image source={{ uri: r.photo_url }} style={styles.reviewAvatarImg} />
+                        ) : (
+                          <Text style={[styles.reviewAvatarText, { color: theme.textTertiary }]}>
+                            {r.display_name?.charAt(0).toUpperCase()}
+                          </Text>
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.reviewName, { color: theme.text }]}>
+                          {r.display_name}
+                          {r.is_network ? <Text style={{ color: theme.accent }}> · friend</Text> : ''}
+                        </Text>
+                        <Text style={[styles.reviewDate, { color: theme.textTertiary }]}>{timeAgo(r.created_at)}</Text>
+                      </View>
+                      <WavelengthRating rating={r.rating} size="sm" />
+                    </View>
+                    {r.post_photos.length > 0 && (
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.reviewPhotos}>
+                        {r.post_photos.map((uri, i) => (
+                          <Image key={i} source={{ uri }} style={styles.reviewPhoto} contentFit="cover" />
+                        ))}
+                      </ScrollView>
+                    )}
+                    <Text style={[styles.reviewCaption, { color: theme.text }]}>"{r.caption}"</Text>
+                  </View>
+                )
+              )
             )}
           </ScrollView>
         </View>
@@ -540,5 +556,17 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     fontSize: 14,
     lineHeight: 21,
+  },
+  lockedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  lockedName: {
+    flex: 1,
+    fontFamily: 'Lora_400Regular_Italic',
+    fontStyle: 'italic',
+    fontSize: FontSize.sm,
   },
 });

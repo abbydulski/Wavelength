@@ -104,15 +104,34 @@ CREATE TABLE public.posts (
 
 ALTER TABLE public.posts ENABLE ROW LEVEL SECURITY;
 
--- Public posts visible to everyone
+-- Public posts are visible to everyone UNLESS the author is private.
+-- Private authors' posts are only readable by the author and their followers.
+-- (Anonymous rating-only visibility for private authors is served via the
+-- get_place_ratings SECURITY DEFINER RPC, which never exposes identity/caption/photos.)
 CREATE POLICY "Public posts are viewable by everyone"
   ON public.posts FOR SELECT
-  USING (is_public = true);
+  USING (
+    is_public = true
+    AND NOT EXISTS (
+      SELECT 1 FROM public.users u
+      WHERE u.id = posts.user_id AND u.is_private = true
+    )
+  );
 
 -- Users can see their own posts
 CREATE POLICY "Users can view own posts"
   ON public.posts FOR SELECT
   USING (auth.uid() = user_id);
+
+-- Followers can view a private author's posts
+CREATE POLICY "Followers can view followed posts"
+  ON public.posts FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.follows f
+      WHERE f.follower_id = auth.uid() AND f.following_id = posts.user_id
+    )
+  );
 
 -- Users can create their own posts (rate-limit checked by function)
 CREATE POLICY "Users can create own posts"
@@ -146,9 +165,25 @@ CREATE TABLE public.post_photos (
 
 ALTER TABLE public.post_photos ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Post photos are viewable by everyone"
+-- Photos are viewable only when the parent post is viewable to the requester
+-- (public non-private author, own post, or a followed author).
+CREATE POLICY "Post photos follow post visibility"
   ON public.post_photos FOR SELECT
-  USING (true);
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.posts p
+      JOIN public.users u ON u.id = p.user_id
+      WHERE p.id = post_photos.post_id
+        AND (
+          auth.uid() = p.user_id
+          OR (p.is_public = true AND u.is_private IS NOT TRUE)
+          OR EXISTS (
+            SELECT 1 FROM public.follows f
+            WHERE f.follower_id = auth.uid() AND f.following_id = p.user_id
+          )
+        )
+    )
+  );
 
 CREATE POLICY "Users can add photos to own posts"
   ON public.post_photos FOR INSERT
@@ -209,15 +244,8 @@ CREATE POLICY "Users can unfollow"
   ON public.follows FOR DELETE
   USING (auth.uid() = follower_id);
 
--- Deferred policy: followers can see private posts
-CREATE POLICY "Followers can view private posts"
-  ON public.posts FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.follows
-      WHERE follower_id = auth.uid() AND following_id = posts.user_id
-    )
-  );
+-- Note: follower visibility for posts is defined alongside the posts policies
+-- above ("Followers can view followed posts").
 
 -- ============================================================
 -- 8. Follow requests
@@ -353,11 +381,12 @@ RETURNS TABLE (
   rating INTEGER,
   category TEXT,
   created_at TIMESTAMPTZ,
-  is_network BOOLEAN
+  is_network BOOLEAN,
+  is_private_locked BOOLEAN
 ) AS $$
 BEGIN
   RETURN QUERY
-  -- Network ratings (from people the user follows) — all of them
+  -- Network ratings (from people the user follows) — full detail, all of them
   (
     SELECT
       p.id AS post_id,
@@ -368,7 +397,8 @@ BEGIN
       p.rating,
       p.category,
       p.created_at,
-      TRUE AS is_network
+      TRUE AS is_network,
+      FALSE AS is_private_locked
     FROM public.posts p
     JOIN public.users u ON u.id = p.user_id
     WHERE p.place_id = p_place_id
@@ -380,7 +410,7 @@ BEGIN
     ORDER BY p.created_at DESC
   )
   UNION ALL
-  -- Non-network ratings — most recent N (exclude private accounts)
+  -- Public (non-private) non-network ratings — full detail, most recent N
   (
     SELECT
       p.id AS post_id,
@@ -391,12 +421,41 @@ BEGIN
       p.rating,
       p.category,
       p.created_at,
-      FALSE AS is_network
+      FALSE AS is_network,
+      FALSE AS is_private_locked
     FROM public.posts p
     JOIN public.users u ON u.id = p.user_id
     WHERE p.place_id = p_place_id
       AND p.is_public = true
       AND u.is_private IS NOT TRUE
+      AND NOT EXISTS (
+        SELECT 1 FROM public.follows f
+        WHERE f.follower_id = p_user_id AND f.following_id = p.user_id
+      )
+      AND p.user_id != p_user_id
+    ORDER BY p.created_at DESC
+    LIMIT p_limit
+  )
+  UNION ALL
+  -- Private non-network ratings — rating ONLY, no identity/caption/photos.
+  -- These count toward the place but stay anonymous until you follow them.
+  (
+    SELECT
+      p.id AS post_id,
+      NULL::UUID AS user_id,
+      NULL::TEXT AS display_name,
+      NULL::TEXT AS photo_url,
+      NULL::TEXT AS caption,
+      p.rating,
+      p.category,
+      p.created_at,
+      FALSE AS is_network,
+      TRUE AS is_private_locked
+    FROM public.posts p
+    JOIN public.users u ON u.id = p.user_id
+    WHERE p.place_id = p_place_id
+      AND p.is_public = true
+      AND u.is_private = true
       AND NOT EXISTS (
         SELECT 1 FROM public.follows f
         WHERE f.follower_id = p_user_id AND f.following_id = p.user_id
