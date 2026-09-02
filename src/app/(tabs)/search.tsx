@@ -140,7 +140,9 @@ export default function SearchScreen() {
           </View>
           <Pressable
             onPress={() => toggleFollow(item.id)}
-            disabled={togglingId === item.id}>
+            disabled={togglingId === item.id}
+            hitSlop={8}
+            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
             {togglingId === item.id ? (
               <ActivityIndicator size="small" color={theme.accent} />
             ) : (

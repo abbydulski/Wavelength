@@ -1,5 +1,6 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+    Animated,
     Dimensions,
     type NativeScrollEvent,
     type NativeSyntheticEvent,
@@ -7,10 +8,11 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    View,
+    View
 } from 'react-native';
 
 import { CrossImage as Image } from './cross-image';
+import { PressableScale } from './pressable-scale';
 
 import { WavelengthRating } from './wavelength-rating';
 
@@ -64,13 +66,16 @@ export function RecommendationCard({
   const photos = photoUrls?.length ? photoUrls : photoUrl ? [photoUrl] : [];
 
   return (
-    <Pressable
+    <PressableScale
       style={[styles.card, { borderBottomColor: theme.border }]}
       onPress={onPressPlace}
       disabled={!onPressPlace}>
       {/* Who + when */}
       <View style={styles.topRow}>
-        <Pressable style={styles.recommender} onPress={onPressUser} disabled={!onPressUser}>
+        <Pressable
+          style={({ pressed }) => [styles.recommender, { opacity: pressed && onPressUser ? 0.6 : 1 }]}
+          onPress={onPressUser}
+          disabled={!onPressUser}>
           <View style={[styles.avatar, { backgroundColor: theme.backgroundElement }]}>
             {avatarUrl ? (
               <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
@@ -92,8 +97,10 @@ export function RecommendationCard({
       </View>
 
       {/* Category + Place */}
-      <Text style={[styles.category, { color: theme.textTertiary }]}>{category.toUpperCase()}</Text>
-      <Text style={[styles.placeName, { color: theme.text }]}>{placeName}</Text>
+      <View style={styles.placeBlock}>
+        <Text style={[styles.category, { color: theme.textTertiary }]}>{category.toUpperCase()}</Text>
+        <Text style={[styles.placeName, { color: theme.text }]}>{placeName}</Text>
+      </View>
 
       {/* Rating */}
       <WavelengthRating rating={rating} />
@@ -104,7 +111,7 @@ export function RecommendationCard({
       ) : null}
 
       {/* The human note */}
-      <Text style={[styles.note, { color: theme.text }]}>"{note}"</Text>
+      <Text style={[styles.note, { color: theme.text }]}>&ldquo;{note}&rdquo;</Text>
 
       {/* Footer: address + reactions */}
       <View style={styles.bottomRow}>
@@ -114,14 +121,40 @@ export function RecommendationCard({
           </Text>
         ) : null}
         {postId && onLove ? (
-          <Pressable
-            onPress={(e) => { e.stopPropagation?.(); onLove(postId); import('@/lib/haptics').then(h => h.hapticMedium()); }}>
-            <Text style={[styles.reactionText, { color: loved ? theme.accent : theme.textTertiary }]}>
-              love{loveCount > 0 ? ` ${loveCount}` : ''}
-            </Text>
-          </Pressable>
+          <LoveButton
+            loved={!!loved}
+            count={loveCount}
+            onPress={() => {
+              onLove(postId);
+              import('@/lib/haptics').then((h) => h.hapticMedium());
+            }}
+          />
         ) : null}
       </View>
+    </PressableScale>
+  );
+}
+
+function LoveButton({ loved, count, onPress }: { loved: boolean; count: number; onPress: () => void }) {
+  const theme = useTheme();
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const handlePress = (e: any) => {
+    e.stopPropagation?.();
+    // Punch the label when loving (not when un-loving).
+    if (!loved) {
+      scale.setValue(0.8);
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 12 }).start();
+    }
+    onPress();
+  };
+
+  return (
+    <Pressable onPress={handlePress} hitSlop={8}>
+      <Animated.Text
+        style={[styles.reactionText, { color: loved ? theme.accent : theme.textTertiary, transform: [{ scale }] }]}>
+        love{count > 0 ? ` ${count}` : ''}
+      </Animated.Text>
     </Pressable>
   );
 }
@@ -178,11 +211,25 @@ function PhotoCarousel({ photos }: { photos: string[] }) {
       </ScrollView>
       <View style={styles.dotsRow}>
         {photos.map((_, i) => (
-          <View key={i} style={[styles.dot, i === activeIndex && styles.dotActive]} />
+          <Dot key={i} active={i === activeIndex} />
         ))}
       </View>
     </View>
   );
+}
+
+function Dot({ active }: { active: boolean }) {
+  const width = useRef(new Animated.Value(active ? 14 : 5)).current;
+  const dotOpacity = useRef(new Animated.Value(active ? 1 : 0.45)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(width, { toValue: active ? 14 : 5, useNativeDriver: false, speed: 20, bounciness: 8 }),
+      Animated.timing(dotOpacity, { toValue: active ? 1 : 0.45, duration: 150, useNativeDriver: false }),
+    ]).start();
+  }, [active, width, dotOpacity]);
+
+  return <Animated.View style={[styles.dot, { width, opacity: dotOpacity }]} />;
 }
 
 const styles = StyleSheet.create({
@@ -214,7 +261,7 @@ const styles = StyleSheet.create({
     height: 28,
   },
   avatarFallback: {
-    fontSize: 11,
+    fontSize: FontSize.xs,
     fontWeight: '600',
   },
   nameText: {
@@ -222,19 +269,20 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
   },
   metaText: {
-    fontSize: 11,
+    fontSize: FontSize.xs,
+  },
+  placeBlock: {
+    gap: 2,
   },
   category: {
-    fontSize: 10,
-    letterSpacing: 1.8,
+    fontSize: FontSize.xs,
+    letterSpacing: 2,
     fontWeight: '500',
-    marginTop: Spacing.sm,
   },
   placeName: {
     fontFamily: 'Lora_600SemiBold',
     fontSize: FontSize.xl,
     lineHeight: 28,
-    marginTop: -2,
   },
   note: {
     fontFamily: 'Lora_400Regular_Italic',
@@ -262,16 +310,9 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   dot: {
-    width: 5,
     height: 5,
     borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.45)',
-  },
-  dotActive: {
     backgroundColor: '#fff',
-    width: 6,
-    height: 6,
-    borderRadius: 3,
   },
   bottomRow: {
     flexDirection: 'row',
@@ -280,11 +321,11 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
   location: {
-    fontSize: 11,
+    fontSize: FontSize.xs,
     flex: 1,
   },
   reactionText: {
     fontFamily: 'Lora_400Regular',
-    fontSize: 12,
+    fontSize: FontSize.xs,
   },
 });

@@ -330,8 +330,8 @@ export default function CreateScreen() {
 
             {/* Submit */}
             <Pressable
-              style={[styles.submitButton, {
-                opacity: loading ? 0.6 : 1,
+              style={({ pressed }) => [styles.submitButton, {
+                opacity: loading ? 0.6 : pressed && canSubmit ? 0.7 : 1,
                 borderBottomColor: canSubmit ? theme.accent : theme.border,
               }]}
               onPress={handleSubmit}
@@ -349,7 +349,7 @@ export default function CreateScreen() {
       {/* Inline toast */}
       {toast && (
         <Animated.View style={[styles.toast, { opacity: toastOpacity, backgroundColor: theme.accent }]}>
-          <Text style={styles.toastText}>{toast}</Text>
+          <Text style={[styles.toastText, { color: theme.accentText }]}>{toast}</Text>
         </Animated.View>
       )}
     </ThemedView>
@@ -431,8 +431,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   toastText: {
-    color: '#fff',
     fontFamily: 'Lora_500Medium',
-    fontSize: 13,
+    fontSize: FontSize.sm,
   },
 });

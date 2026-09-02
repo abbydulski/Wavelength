@@ -38,7 +38,7 @@ export const Colors = {
     card: '#27261F',
     accent: '#7A9B66',
     accentLight: '#2A3326',
-    accentText: '#FFFFFF',
+    accentText: '#1A1917',
     rust: '#D4856B',
     rustLight: '#3A2A22',
     destructive: '#D4856B',
