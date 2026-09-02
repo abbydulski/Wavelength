@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     });
     // If a session came back, user was auto-confirmed (dev/free-tier behavior)
-    const needsConfirmation = !error && data?.user && !data.session;
+    const needsConfirmation = !!(!error && data?.user && !data.session);
     return { error: error?.message ?? null, needsConfirmation };
   };
 

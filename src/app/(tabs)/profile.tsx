@@ -79,7 +79,7 @@ export default function ProfileScreen() {
         setPhotoUrl(profileRes.data.photo_url ?? null);
         setIsPrivate((profileRes.data as any).is_private ?? false);
       }
-      setPosts((postsRes.data as UserPost[]) ?? []);
+      setPosts((postsRes.data as unknown as UserPost[]) ?? []);
       setFollowerCount(followersRes.count ?? 0);
       setFollowingCount(followingRes.count ?? 0);
       setFollowRequests(

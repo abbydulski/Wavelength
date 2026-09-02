@@ -13,7 +13,7 @@ export default function AppTabs() {
       indicatorColor={colors.accent}
       labelStyle={{
         selected: { color: colors.accent },
-        unselected: { color: colors.textSecondary },
+        default: { color: colors.textSecondary },
       }}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>Feed</NativeTabs.Trigger.Label>

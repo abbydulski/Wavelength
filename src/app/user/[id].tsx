@@ -73,7 +73,7 @@ export default function UserProfileScreen() {
       if (isPriv && !following && !isOwn) {
         setPosts([]);
       } else {
-        setPosts((postsRes.data as UserPost[]) ?? []);
+        setPosts((postsRes.data as unknown as UserPost[]) ?? []);
       }
       setIsFollowing(following);
       setIsRequested(!!requestRes.data);
