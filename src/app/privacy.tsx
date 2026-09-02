@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   },
   heading: {
     fontFamily: 'Lora_600SemiBold',
-    fontSize: FontSize.md,
+    fontSize: FontSize.lg,
     marginTop: Spacing.xl,
     marginBottom: Spacing.sm,
   },

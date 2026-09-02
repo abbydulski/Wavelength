@@ -17,7 +17,7 @@ export function getRatingColor(rating: number, scheme: 'light' | 'dark' = 'light
 
 export function RatingPicker({ value, onChange }: RatingPickerProps) {
   const theme = useTheme();
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const activeColor = value > 0 ? getRatingColor(value, scheme) : theme.ratingEmpty;
 
   return (

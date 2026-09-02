@@ -16,7 +16,7 @@ type WavelengthRatingProps = {
  */
 export function WavelengthRating({ rating, size = 'md' }: WavelengthRatingProps) {
   const theme = useTheme();
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const barWidth = size === 'sm' ? 14 : 20;
   const barHeight = size === 'sm' ? 4 : 5;
   const gap = size === 'sm' ? 3 : 4;
