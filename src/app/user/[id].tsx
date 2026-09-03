@@ -108,7 +108,9 @@ export default function UserProfileScreen() {
   const isOwnProfile = user?.id === id;
 
   const renderPost = ({ item }: { item: UserPost }) => (
-    <View style={[styles.postItem, { borderBottomColor: theme.border }]}>
+    <Pressable
+      onPress={() => router.push(`/post/${item.id}`)}
+      style={({ pressed }) => [styles.postItem, { borderBottomColor: theme.border, opacity: pressed ? 0.6 : 1 }]}>
       <Text style={[styles.postCategory, { color: theme.textTertiary }]}>
         {item.category?.toUpperCase() || 'PLACE'}
       </Text>
@@ -127,7 +129,7 @@ export default function UserProfileScreen() {
         ) : null}
         <Text style={[styles.postDate, { color: theme.textTertiary }]}>{timeAgo(item.created_at)}</Text>
       </View>
-    </View>
+    </Pressable>
   );
 
   if (loading) {

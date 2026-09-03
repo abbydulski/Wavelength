@@ -77,6 +77,7 @@ function RootLayoutNav() {
         <Stack.Screen name="(tabs)" />
 
         <Stack.Screen name="user/[id]" options={{ presentation: 'card' }} />
+        <Stack.Screen name="post/[id]" options={{ presentation: 'card' }} />
         <Stack.Screen name="activity" options={{ presentation: 'card' }} />
         <Stack.Screen name="privacy" options={{ presentation: 'card' }} />
       </Stack>

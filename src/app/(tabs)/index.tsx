@@ -199,6 +199,7 @@ export default function FeedScreen() {
         isNetwork
         isNew={!!lastSeenRef.current && item.created_at > lastSeenRef.current && item.user_id !== user?.id}
         onPressUser={() => router.push(`/user/${item.user_id}`)}
+        onPressPlace={() => router.push(`/post/${item.id}`)}
         postId={item.id}
         loveCount={loves[item.id]?.count ?? 0}
         loved={loves[item.id]?.loved ?? false}

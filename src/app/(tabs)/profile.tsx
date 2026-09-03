@@ -1,6 +1,6 @@
 import { CrossImage as Image } from '@/components/cross-image';
 import * as ImagePicker from 'expo-image-picker';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
     ActivityIndicator,
@@ -37,6 +37,7 @@ type UserPost = {
 
 export default function ProfileScreen() {
   const theme = useTheme();
+  const router = useRouter();
   const { user, signOut, deleteAccount } = useAuth();
   const [posts, setPosts] = useState<UserPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -246,7 +247,9 @@ export default function ProfileScreen() {
   );
 
   const renderPost = ({ item }: { item: UserPost }) => (
-    <View style={[styles.postCard, { borderBottomColor: theme.border }]}>
+    <Pressable
+      onPress={() => router.push(`/post/${item.id}`)}
+      style={({ pressed }) => [styles.postCard, { borderBottomColor: theme.border, opacity: pressed ? 0.6 : 1 }]}>
       <View style={styles.postTop}>
         <View style={{ flex: 1, gap: Spacing.xs }}>
           <Text style={[styles.postCategory, { color: theme.textTertiary }]}>
@@ -269,7 +272,7 @@ export default function ProfileScreen() {
       <Text style={[styles.postDate, { color: theme.textTertiary }]}>
         {timeAgo(item.created_at)}
       </Text>
-    </View>
+    </Pressable>
   );
 
   function timeAgo(dateStr: string): string {
