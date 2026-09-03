@@ -37,7 +37,7 @@ type UserPost = {
 
 export default function ProfileScreen() {
   const theme = useTheme();
-  const { user, signOut } = useAuth();
+  const { user, signOut, deleteAccount } = useAuth();
   const [posts, setPosts] = useState<UserPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -54,6 +54,33 @@ export default function ProfileScreen() {
   const [editName, setEditName] = useState('');
   const [editBio, setEditBio] = useState('');
   const [saving, setSaving] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+
+  const performDeleteAccount = useCallback(async () => {
+    setDeletingAccount(true);
+    const { error: delError } = await deleteAccount();
+    if (delError) {
+      setDeletingAccount(false);
+      const msg = 'Could not delete your account. Please try again.';
+      if (Platform.OS === 'web') window.alert(msg);
+      else Alert.alert('Deletion failed', msg);
+    }
+    // On success the auth listener clears the session and routes to auth.
+  }, [deleteAccount]);
+
+  const confirmDeleteAccount = useCallback(() => {
+    import('@/lib/haptics').then((h) => h.hapticWarning());
+    const message =
+      'This permanently deletes your account and all your recommendations, follows, and requests. This cannot be undone.';
+    if (Platform.OS === 'web') {
+      if (window.confirm(message)) performDeleteAccount();
+    } else {
+      Alert.alert('Delete account', message, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: performDeleteAccount },
+      ]);
+    }
+  }, [performDeleteAccount]);
 
   const fetchProfile = useCallback(async () => {
     if (!user) return;
@@ -350,6 +377,15 @@ export default function ProfileScreen() {
               <Pressable onPress={signOut}>
                 <Text style={[styles.signOutText, { color: theme.textTertiary }]}>Sign out</Text>
               </Pressable>
+              <Pressable
+                onPress={confirmDeleteAccount}
+                disabled={deletingAccount}
+                hitSlop={8}
+                style={({ pressed }) => ({ opacity: pressed || deletingAccount ? 0.6 : 1 })}>
+                <Text style={[styles.deleteAccountText, { color: theme.destructive }]}>
+                  {deletingAccount ? 'Deleting account…' : 'Delete account'}
+                </Text>
+              </Pressable>
             </View>
           )}
         </View>
@@ -475,6 +511,7 @@ const styles = StyleSheet.create({
   privacyLabel: { fontFamily: 'Lora_500Medium', fontSize: FontSize.sm },
   privacyHint: { fontSize: 11, lineHeight: 16 },
   signOutText: { fontSize: FontSize.sm, fontFamily: 'Lora_400Regular', marginTop: Spacing.sm },
+  deleteAccountText: { fontSize: FontSize.sm, fontFamily: 'Lora_400Regular', marginTop: Spacing.lg },
   statsText: { fontSize: FontSize.sm },
   bioText: { fontSize: FontSize.sm },
   editProfileText: { fontSize: FontSize.sm, fontWeight: '600' },

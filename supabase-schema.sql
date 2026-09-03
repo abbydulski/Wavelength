@@ -559,6 +559,29 @@ GRANT SELECT ON public.post_reactions TO anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.post_reactions TO authenticated;
 
 -- ============================================================
+-- 14b. RPC: Delete the calling user's own account
+-- ============================================================
+-- Deletes the authenticated user's auth.users row. Every user-owned table
+-- (users, posts, post_photos, comments, follows, follow_requests,
+-- post_reactions) cascades from auth.users / public.users, so this removes
+-- all of the user's data in one call. Runs as SECURITY DEFINER because the
+-- anon/authenticated role cannot delete from auth.users directly.
+CREATE OR REPLACE FUNCTION public.delete_own_account()
+RETURNS void AS $$
+DECLARE
+  uid UUID := auth.uid();
+BEGIN
+  IF uid IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+  DELETE FROM auth.users WHERE id = uid;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth;
+
+REVOKE ALL ON FUNCTION public.delete_own_account() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.delete_own_account() TO authenticated;
+
+-- ============================================================
 -- 15. Storage buckets (create manually in Supabase Dashboard)
 -- ============================================================
 -- Create these PUBLIC buckets in Dashboard → Storage:

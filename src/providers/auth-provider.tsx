@@ -11,6 +11,7 @@ type AuthContextType = {
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
+  deleteAccount: () => Promise<{ error: string | null }>;
 };
 
 type OnboardingContextType = {
@@ -68,6 +69,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null };
   };
 
+  const deleteAccount = async () => {
+    // Deletes the auth user (cascades all user data) via SECURITY DEFINER RPC,
+    // then clears the local session.
+    const { error } = await supabase.rpc('delete_own_account');
+    if (error) return { error: error.message };
+    await supabase.auth.signOut();
+    return { error: null };
+  };
+
   // Onboarding state
   const [hasOnboarded, setHasOnboarded] = useState<boolean | null>(null);
 
@@ -103,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signIn,
         signOut,
         resetPassword,
+        deleteAccount,
       }}>
       <OnboardingContext.Provider
         value={{ hasOnboarded, checkOnboarding, completeOnboarding }}>
