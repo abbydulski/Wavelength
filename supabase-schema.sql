@@ -571,6 +571,12 @@ RETURNS void AS $$
 DECLARE
   uid UUID := auth.uid();
 BEGIN
+  -- Require a real authenticated API request (a JWT sub claim). This blocks
+  -- invocation from a superuser/dashboard context where auth.uid() could
+  -- otherwise resolve to an impersonated user.
+  IF current_setting('request.jwt.claim.sub', true) IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
   IF uid IS NULL THEN
     RAISE EXCEPTION 'Not authenticated';
   END IF;
