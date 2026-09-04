@@ -601,7 +601,11 @@ DECLARE
   uid UUID := auth.uid();
   au auth.users%ROWTYPE;
 BEGIN
-  IF current_setting('request.jwt.claim.sub', true) IS NULL OR uid IS NULL THEN
+  -- Rely on auth.uid(), which resolves the caller from either the
+  -- request.jwt.claim.sub GUC or the request.jwt.claims JSON. This is a
+  -- non-destructive self-heal, so it does not need the anti-dashboard
+  -- hardening that delete_own_account uses.
+  IF uid IS NULL THEN
     RAISE EXCEPTION 'Not authenticated';
   END IF;
 
