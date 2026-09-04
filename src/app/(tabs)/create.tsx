@@ -1,3 +1,4 @@
+import { File } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -200,12 +201,15 @@ export default function CreateScreen() {
         }
         const filePath = `${user.id}/${postData.id}/${i}.${ext}`;
 
-        const response = await fetch(photo.uri);
-        const blob = await response.blob();
+        // Native's Blob constructor rejects ArrayBuffer views, so read raw bytes
+        // with expo-file-system. Web keeps using fetch().blob().
+        const fileBody = Platform.OS === 'web'
+          ? await (await fetch(photo.uri)).blob()
+          : await new File(photo.uri).bytes();
 
         const { error: uploadError } = await supabase.storage
           .from('post-photos')
-          .upload(filePath, blob, { contentType });
+          .upload(filePath, fileBody, { contentType });
 
         if (uploadError) {
           console.error('Photo upload error:', uploadError);

@@ -1,4 +1,5 @@
 import { CrossImage as Image } from '@/components/cross-image';
+import { File } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -159,12 +160,15 @@ export default function ProfileScreen() {
       }
       const filePath = `${user.id}.${ext}`;
 
-      const response = await fetch(asset.uri);
-      const blob = await response.blob();
+      // Native's Blob constructor rejects ArrayBuffer views, so read raw bytes
+      // with expo-file-system. Web keeps using fetch().blob().
+      const fileBody = Platform.OS === 'web'
+        ? await (await fetch(asset.uri)).blob()
+        : await new File(asset.uri).bytes();
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, blob, { upsert: true, contentType });
+        .upload(filePath, fileBody, { upsert: true, contentType });
 
       if (uploadError) throw uploadError;
 
