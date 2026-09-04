@@ -588,6 +588,42 @@ REVOKE ALL ON FUNCTION public.delete_own_account() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.delete_own_account() TO authenticated;
 
 -- ============================================================
+-- 14c. RPC: Ensure the calling user's profile row exists
+-- ============================================================
+-- Self-heals a missing public.users row for the authenticated user (e.g. if
+-- the handle_new_user trigger did not run at signup). Runs as SECURITY DEFINER
+-- because public.users intentionally has no INSERT policy. Raises if the
+-- auth.users row no longer exists (a stale JWT for a deleted account) so the
+-- client can force a re-authentication instead of hitting a FK violation.
+CREATE OR REPLACE FUNCTION public.ensure_profile()
+RETURNS void AS $$
+DECLARE
+  uid UUID := auth.uid();
+  au auth.users%ROWTYPE;
+BEGIN
+  IF current_setting('request.jwt.claim.sub', true) IS NULL OR uid IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+
+  SELECT * INTO au FROM auth.users WHERE id = uid;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Account no longer exists';
+  END IF;
+
+  INSERT INTO public.users (id, email, display_name)
+  VALUES (
+    au.id,
+    au.email,
+    COALESCE(au.raw_user_meta_data->>'display_name', split_part(au.email, '@', 1))
+  )
+  ON CONFLICT (id) DO NOTHING;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth;
+
+REVOKE ALL ON FUNCTION public.ensure_profile() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.ensure_profile() TO authenticated;
+
+-- ============================================================
 -- 15. Storage buckets (create manually in Supabase Dashboard)
 -- ============================================================
 -- Create these PUBLIC buckets in Dashboard → Storage:

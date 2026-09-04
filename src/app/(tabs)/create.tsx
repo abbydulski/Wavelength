@@ -29,7 +29,7 @@ import { useAuth } from '@/providers/auth-provider';
 
 export default function CreateScreen() {
   const theme = useTheme();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { location: userLocation } = useLocation();
 
   const [place, setPlace] = useState<PlaceResult | null>(null);
@@ -128,6 +128,18 @@ export default function CreateScreen() {
     if (!canSubmit || !user) return;
     setLoading(true);
     try {
+      // 0. Ensure this account still has a profile row. Self-heals a missing
+      // public.users row; if the account was deleted, sign out and re-auth.
+      const { error: profileError } = await supabase.rpc('ensure_profile');
+      if (profileError) {
+        if (/no longer exists|not authenticated/i.test(profileError.message ?? '')) {
+          showAlert('Session expired', 'Your account is no longer valid. Please sign in again.');
+          await signOut();
+          return;
+        }
+        throw profileError;
+      }
+
       // 1. Upsert place
       const locationValue = place.lat && place.lng
         ? `SRID=4326;POINT(${place.lng} ${place.lat})`
