@@ -47,7 +47,10 @@
         {
           "locationWhenInUsePermission": "Wavelength uses your location to surface nearby recommendations from people you trust and to show how far away each place is — for example, finding a coffee shop a friend loved within a few miles of you. Your location is never shared with other users."
         }
-      ]
+      ],
+      "expo-image",
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
