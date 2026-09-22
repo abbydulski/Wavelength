@@ -272,6 +272,29 @@ CREATE POLICY "Users can delete follow requests they sent or received"
   ON public.follow_requests FOR DELETE
   USING (auth.uid() = from_user_id OR auth.uid() = to_user_id);
 
+-- Approve a follow request: only the recipient (to_user_id) may approve.
+-- Runs as SECURITY DEFINER so the follow row — owned by the requester — can be
+-- created on their behalf, which the "Users can follow others" INSERT policy
+-- (auth.uid() = follower_id) would otherwise block.
+CREATE OR REPLACE FUNCTION public.approve_follow_request(p_request_id UUID)
+RETURNS VOID AS $$
+DECLARE
+  r public.follow_requests%ROWTYPE;
+BEGIN
+  SELECT * INTO r FROM public.follow_requests WHERE id = p_request_id;
+  IF NOT FOUND THEN
+    RETURN;
+  END IF;
+  IF r.to_user_id != auth.uid() THEN
+    RAISE EXCEPTION 'Not authorized to approve this request';
+  END IF;
+  INSERT INTO public.follows (follower_id, following_id)
+  VALUES (r.from_user_id, r.to_user_id)
+  ON CONFLICT (follower_id, following_id) DO NOTHING;
+  DELETE FROM public.follow_requests WHERE id = p_request_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- ============================================================
 -- 9. Feedback
 -- ============================================================
@@ -463,6 +486,27 @@ BEGIN
       AND p.user_id != p_user_id
     ORDER BY p.created_at DESC
     LIMIT p_limit
+  )
+  UNION ALL
+  -- The viewer's own ratings — always full detail, regardless of privacy.
+  -- (Own posts never match the branches above, so no duplication.)
+  (
+    SELECT
+      p.id AS post_id,
+      p.user_id,
+      u.display_name,
+      u.photo_url,
+      p.caption,
+      p.rating,
+      p.category,
+      p.created_at,
+      TRUE AS is_network,
+      FALSE AS is_private_locked
+    FROM public.posts p
+    JOIN public.users u ON u.id = p.user_id
+    WHERE p.place_id = p_place_id
+      AND p.user_id = p_user_id
+    ORDER BY p.created_at DESC
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

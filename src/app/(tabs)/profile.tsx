@@ -208,12 +208,17 @@ export default function ProfileScreen() {
     }
   };
 
-  const approveRequest = async (requestId: string, fromUserId: string) => {
+  const approveRequest = async (requestId: string) => {
     if (!user) return;
-    // Add to follows + delete the request
-    await supabase.from('follows').insert({ follower_id: fromUserId, following_id: user.id });
-    await supabase.from('follow_requests').delete().eq('id', requestId);
+    // Recipient-only RPC creates the follow (on the requester's behalf) and
+    // deletes the request — the direct insert is blocked by follows RLS.
+    const { error } = await supabase.rpc('approve_follow_request', { p_request_id: requestId });
+    if (error) {
+      console.error('Approve request error:', error);
+      return;
+    }
     setFollowRequests((prev) => prev.filter((r) => r.id !== requestId));
+    setFollowerCount((c) => c + 1);
   };
 
   const denyRequest = async (requestId: string) => {
@@ -407,7 +412,7 @@ export default function ProfileScreen() {
               <View key={req.id} style={[styles.requestCard, { borderBottomColor: theme.border }]}>
                 <Text style={[styles.requestName, { color: theme.text }]}>{req.display_name}</Text>
                 <View style={styles.requestActions}>
-                  <Pressable onPress={() => approveRequest(req.id, req.from_user_id)}>
+                  <Pressable onPress={() => approveRequest(req.id)}>
                     <Text style={[styles.requestAcceptText, { color: theme.accent }]}>Accept</Text>
                   </Pressable>
                   <Text style={{ color: theme.border }}>·</Text>
